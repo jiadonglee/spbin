@@ -13,6 +13,12 @@ from .subdwarf import _planck, _galex_flux, _check_prior
 
 DATA = Path(__file__).parent / "models/whitedwarf"
 G_CGS, MSUN_G, RSUN_CM = 6.6743e-8, 1.988409870698051e33, 6.957e10
+# Coeval pairs fitted as one component, and the hypotheses of StellarModel(pms=True).
+PAIR, PMS_KINDS = ("ms+ms", "pms+pms"), ("pms", "pms+pms")
+# Starting masses and fitted ages (Gyr) of dwarfs. Pre-main-sequence luminosity changes
+# steeply with mass and age, so the pms grid is dense: a coarse one ranks the wrong basin first.
+SEED_MASSES = dict(ms=np.linspace(.1, 2.2, 22), pms=np.geomspace(.1, 2.2, 80))
+AGE_SEEDS = dict(ms=(1., 2., 5., 8., 9.8), pms=tuple(np.geomspace(.0045, .45, 13)))
 
 
 class WhiteDwarfModel:
@@ -193,7 +199,8 @@ class _Problem:
         return dict(flux=np.r_[full[self.idx] * att[self.idx], extra], columns=cols,
                     variance=np.r_[variance[self.idx], (.5 * extra)**2], full=full * att, coarse=coarse,
                     labels=dict(teff=float(pred["teff"][0]), mass=float(mass), logg=float(pred["logg"][0]),
-                                radius=float(pred["radius"][0]), age_gyr=float(age), feh=float(feh),
+                                radius=float(pred["radius"][0]), age_gyr=float(age),
+                                log_age=float(np.log10(age) + 9), feh=float(feh),
                                 q=float(q), m2=float(mass * q), beta_g=pred["beta_g"]))
 
     def white_dwarf(self, teff, mass, radius, logg, scale, e):
@@ -260,10 +267,10 @@ class _Hypothesis:
         if kind != "wd":
             self.bounds["primary"] = (np.log(.1), np.log(2.2))
             if age is None:
-                self.bounds["age"] = (np.log(.5), np.log(10.))
+                self.bounds["age"] = tuple(np.log(problem.stellar.age_range_gyr))
             if feh is None:
                 self.bounds["feh"] = (-1., .5)
-        if kind == "ms+ms" and luminous_mass is None:
+        if kind in PAIR and luminous_mass is None:
             self.bounds["q"] = (.1, 1.)
         if problem.extinction is None:
             self.bounds["e"] = (0., 2.)
@@ -287,9 +294,11 @@ class _Hypothesis:
                 return None
             components.append(wd)
         if self.kind != "wd":
-            age, feh = float(np.clip(np.exp(v["age"]), .5, 10.)) if self.age is None else self.age, v.get("feh", self.feh)
+            age = (float(np.clip(np.exp(v["age"]), *p.stellar.age_range_gyr)) if self.age is None
+                   else self.age)
+            feh = v.get("feh", self.feh)
             mass, q = np.exp(v["primary"]), 0.
-            if self.kind == "ms+ms":
+            if self.kind in PAIR:
                 if self.luminous_mass is None:
                     q = v["q"]
                 else:
@@ -328,16 +337,21 @@ class _Hypothesis:
         temperatures = [8000, 11000, 15000, 22000, 35000, 60000] if "t" in self.names else [15000]
         masses = [.2, .4, .7, 1., 1.3] if "primary" in self.names else [.8]
         ages = [5.]
-        if self.kind in ("dwarf", "ms+ms") and self.age is None:
-            masses = np.linspace(.1, 2.2, 22)
-            ages = [1., 2., 5., 8., 9.8]
+        if self.kind in PMS_KINDS:
+            masses = SEED_MASSES["pms"]
+            ages = AGE_SEEDS["pms"] if self.age is None else ages
+        elif self.kind in ("dwarf", "ms+ms") and self.age is None:
+            masses = SEED_MASSES["ms"]
+            ages = AGE_SEEDS["ms"]
         ratios = [.3, .6, .9, 1.] if "q" in self.names else [.6]
         seeds = []
         if initial is not None:
-            # A companion adds light: also start from less massive primaries.
+            # A companion adds light: also start from less massive primaries. A pms pair
+            # also starts at the single star with a faint companion.
             primary = {**base, **initial}["primary"]
+            starts = ratios + [.1] if self.kind == "pms+pms" else ratios
             seeds.extend({**base, **initial, "t": np.log(t), "q": q, "primary": max(primary + s, np.log(.1))}
-                         for t in temperatures for q in ratios for s in np.log([1., .97, .93, .87, .8]))
+                         for t in temperatures for q in starts for s in np.log([1., .97, .93, .87, .8]))
         for t, mass, age, q in product(temperatures, masses, ages, ratios):
             v = dict(base, t=np.log(t), primary=np.log(mass), age=np.log(age), q=q)
             if self.free_radius and "t" in self.names:
@@ -402,7 +416,8 @@ def _prepare(sed, model, stellar, extinction, extinction_prior, dust_prior, para
     if extinction_prior is not None:
         extinction_prior = _check_prior("extinction_prior", {"e": extinction_prior})["e"]
     for name, priors, keys in [("whitedwarf_prior", whitedwarf_prior, {"teff", "mass", "logg", "radius"}),
-                               ("companion_prior", companion_prior, {"teff", "mass", "logg", "radius", "age_gyr", "feh"})]:
+                               ("companion_prior", companion_prior,
+                                {"teff", "mass", "logg", "radius", "age_gyr", "log_age", "feh"})]:
         if priors and set(priors) - keys:
             raise ValueError(f"unsupported labels in {name}: {sorted(set(priors) - keys)}")
     return _Problem(sed, model, stellar, extinction, extinction_prior, dust_prior, parallax, fit_parallax,
@@ -425,24 +440,38 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
     hypotheses selects from "dwarf", "ms+ms" (a coeval dwarf pair with free q,
     one component with fully correlated model errors), "wd" and "wd+dwarf";
     by default the last three of these without "ms+ms", or "dwarf" and "wd"
-    with companions=False.
+    with companions=False. "pms" and "pms+pms" are the single star and the
+    coeval pair on StellarModel(pms=True), the default stellar model for
+    them; they are not combined with the main-sequence dwarf hypotheses.
+    companion_prior takes (mean, sigma) on the dwarf's teff, mass, logg,
+    radius, age_gyr, log_age (log10 yr) and feh.
     Delta objectives are diagnostics, not classification probabilities.
     """
     kinds = (tuple(hypotheses) if hypotheses is not None
              else ("dwarf", "wd", "wd+dwarf") if companions else ("dwarf", "wd"))
-    unknown = set(kinds) - {"dwarf", "ms+ms", "wd", "wd+dwarf"}
+    unknown = set(kinds) - {"dwarf", "ms+ms", "wd", "wd+dwarf", *PMS_KINDS}
     if unknown or not kinds:
         raise ValueError(f"unknown hypotheses: {sorted(unknown)}")
+    pms = bool(set(kinds) & set(PMS_KINDS))
+    if pms and set(kinds) & {"dwarf", "ms+ms", "wd+dwarf"}:
+        raise ValueError("pms hypotheses are not fitted together with main-sequence dwarf hypotheses")
+    if pms:
+        stellar = StellarModel(pms=True) if stellar is None else stellar
+        if not stellar.pms:
+            raise ValueError("pms hypotheses need StellarModel(pms=True)")
+    elif stellar is not None and stellar.pms and set(kinds) - {"wd"}:
+        raise ValueError("dwarf hypotheses need a main-sequence StellarModel")
     p = _prepare(sed, model, stellar, extinction, extinction_prior, dust_prior, parallax, fit_parallax,
                  blue, galex, use_spherex, whitedwarf_prior, companion_prior)
     results = {}
     primary_seed = None
-    if "dwarf" in kinds:
-        kinds = ("dwarf",) + tuple(k for k in kinds if k != "dwarf")
+    single = "pms" if pms else "dwarf"
+    if single in kinds:
+        kinds = (single,) + tuple(k for k in kinds if k != single)
     for kind in kinds:
         results[kind], values = _Hypothesis(p, kind, free_radius, companion_age_gyr, companion_feh).fit(
-            initial=primary_seed if kind in ("ms+ms", "wd+dwarf") else None)
-        if kind == "dwarf":
+            initial=primary_seed if kind in PAIR + ("wd+dwarf",) else None)
+        if kind == single:
             primary_seed = values
     best = min(results, key=lambda k: results[k]["objective"])
     if not np.isfinite(results[best]["objective"]):

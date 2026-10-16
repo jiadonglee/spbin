@@ -57,6 +57,12 @@ def _hot_assets():
 
 
 @cache
+def _pms_assets():
+    return dict(summary=json.loads((DATA / "pms" / "summary.json").read_text()),
+                table=_frozen(_load(DATA / "pms" / "pms_correction.npz")))
+
+
+@cache
 def wavelength_um():
     """The 168 channel wavelengths, without building a StellarModel."""
     norm = _assets()["norm"]
@@ -69,6 +75,17 @@ def wavelength_um():
 def _smoothstep(x):
     u = np.clip(x, 0, 1)
     return 10*u**3 - 15*u**4 + 6*u**5
+
+
+def _knot_weights(knots, teff):
+    """Linear-interpolation weights (n, len(knots)), held at the end knots."""
+    t = np.clip(np.atleast_1d(np.asarray(teff, float)), knots[0], knots[-1])
+    i = np.clip(np.searchsorted(knots, t, side="right") - 1, 0, len(knots) - 2)
+    f = (t - knots[i]) / (knots[i + 1] - knots[i])
+    weights = np.zeros((len(t), len(knots)))
+    weights[np.arange(len(t)), i] = 1 - f
+    weights[np.arange(len(t)), i + 1] += f
+    return weights
 
 
 def _bilinear(teff_ax, logg_ax, values, teff, logg):
@@ -117,9 +134,16 @@ class StellarModel:
     synthetic-grid channel table with an empirical XP operator correction,
     reaching 30 kK. It predicts XP61 and J/H/Ks only, extends age down to
     10**6.6 yr, and requires |[M/H]| <= 0.3 for hot components.
+
+    pms=True is the pre-main-sequence route: ages 10**6.6 yr--0.5 Gyr on the
+    same network and tracks, XP61 and J/H/Ks only, with an empirical youth
+    correction of each component (pms_correction) and its own model-error
+    term, both calibrated at [M/H] = 0 on 10--200 Myr cluster members.
     """
 
-    def __init__(self, hot=False):
+    def __init__(self, hot=False, pms=False):
+        if hot and pms:
+            raise ValueError("hot and pms are separate routes")
         assets = _assets()
         self.summary = assets["summary"]
         self.norm = assets["norm"]
@@ -132,10 +156,16 @@ class StellarModel:
         self.channels = np.array([f"XP{i:02d}" for i in range(61)]
                                  + ["J", "H", "Ks", "W1", "W2"]
                                  + [f"SPHEREx{i:03d}" for i in range(102)])
-        self.hot = hot
+        self.hot, self.pms = hot, pms
         self.support = np.ones(len(self.channels), bool)
         self.age_range_gyr = (0.5, 10.0)
         self.mass_range = (0.08, 2.2)
+        if pms:
+            pms_assets = _pms_assets()
+            self.pms_summary = pms_assets["summary"]
+            self.pms_table = pms_assets["table"]
+            self.support[HOT_CHANNELS:] = False
+            self.age_range_gyr = (10**(6.6 - 9), 0.5)
         if hot:
             hot_assets = _hot_assets()
             self.hot_summary = hot_assets["summary"]
@@ -250,6 +280,28 @@ class StellarModel:
         flux[:, :HOT_CHANNELS] = np.exp(ln_flux) * np.asarray(radius, float)[:, None]**2
         return flux
 
+    def _pms_youth(self, age_gyr):
+        """Youth term x and taper t of the pms correction at one age."""
+        table = self.pms_table
+        log_age = np.log10(age_gyr) + 9
+        x = np.clip(log_age, *table["log_age_range"]) - table["log_age_pivot"]
+        low, high = table["taper_log_age"]
+        return float(x), float(1 - _smoothstep((log_age - low) / (high - low)))
+
+    def pms_correction(self, teff, age_gyr):
+        """ln-flux correction of the pms route on XP61 + J/H/Ks, shape (n, 64).
+
+        t(age) sum_k w_k(Teff) (a_k + b_k x), the form of the hot table's
+        cool-edge term: x = log10(age/yr) - log_age_pivot clipped to the
+        calibrated log_age_range, w_k linear interpolation on teff_knots (held
+        below the first knot; the last knot is zero), and t = 1 up to
+        taper_log_age[0] falling smoothly to 0 at taper_log_age[1] (0.5 Gyr).
+        """
+        table = self.pms_table
+        x, taper = self._pms_youth(age_gyr)
+        weights = _knot_weights(table["teff_knots"], teff)
+        return taper * (weights @ (table["a"] + x * table["b"]))
+
     def _components(self, labels, physical):
         """Component fluxes, or None if any component lies outside its route."""
         if not (np.isfinite(labels).all() and np.isfinite(physical).all()):
@@ -285,6 +337,9 @@ class StellarModel:
         hot = f"PARSEC+{self.hot_summary['version']}" if self.hot else ""
         route = ("PARSEC+J-CAPS-v2.1" if not weight.any() else
                  hot if (weight == 1).all() else f"PARSEC+J-CAPS-v2.1/{self.hot_summary['version']}")
+        if self.pms:
+            components[:, :HOT_CHANNELS] *= np.exp(self.pms_correction(labels[:, 0], age_gyr))
+            route += f"+{self.pms_summary['version']}"
         mg = labels[:, 1] + labels[:, 2]
         beta = 0.0 if q == 0 else float(10**(-0.4 * (mg[1] - mg[0])))
         return dict(masses=masses, labels=labels, teff=labels[:, 0], logg=physical[:, 0],
@@ -300,8 +355,12 @@ class StellarModel:
         v2.1_cold below 3800 K, v2.1_warm above 4200 K, and in between
         the covariance (1-w) C_cold + w C_warm with a smoothstep weight w.
         With hot=True the warm term hands over to the hot term over
-        7000--7498 K in the same way. Returns low-rank columns and diagonal
-        variance.
+        7000--7498 K in the same way. With pms=True the pms term is added
+        at the primary's Teff and the system age: one column, the primary's
+        pms correction times amplitude_scatter (star-to-star scatter of the
+        correction's amplitude), and the diagonal extra_diag, both
+        interpolated between Teff knots and scaled by the youth taper.
+        Returns low-rank columns and diagonal variance.
         """
         teff = prediction["teff"][0]
         warm = _smoothstep((teff - ERROR_BLEND_K[0]) / (ERROR_BLEND_K[1] - ERROR_BLEND_K[0]))
@@ -313,4 +372,14 @@ class StellarModel:
             if weight > 0:
                 columns.append(np.sqrt(weight) * flux[:, None] * self.errors[term + "/basis"])
                 variance += weight * (flux * self.errors[term + "/diag"])**2
+        if self.pms:
+            table = self.pms_table
+            taper = self._pms_youth(prediction["age_gyr"])[1]
+            knots = _knot_weights(table["teff_knots"], teff)[0]
+            pattern = np.zeros(len(flux))
+            pattern[:HOT_CHANNELS] = self.pms_correction([teff], prediction["age_gyr"])[0]
+            columns.append((knots @ table["amplitude_scatter"]) * (flux * pattern)[:, None])
+            diag = np.zeros(len(flux))
+            diag[:HOT_CHANNELS] = np.sqrt(knots @ table["extra_diag"]**2)
+            variance += (taper * flux * diag)**2
         return np.concatenate(columns, axis=1), variance

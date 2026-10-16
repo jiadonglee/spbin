@@ -1,0 +1,38 @@
+{
+ "version": "pms-v1",
+ "form": "ln F *= t(age) sum_k w_k(Teff) (a_k + b_k x) per component; x = clip(log10 age/yr, log_age_range) - log_age_pivot; w_k linear in Teff on teff_knots, held below the first, zero from the last; t = 1 below taper_log_age[0], smoothstep to 0 at taper_log_age[1]",
+ "error_term": "one column amplitude_scatter(Teff) x correction x flux at the primary's Teff and the system age, and diagonal extra_diag(Teff) x taper x flux",
+ "channels": "XP61 + J/H/Ks (64); W1/W2 and SPHEREx are not supported",
+ "units": "ln F_lambda; amplitude_scatter in units of the correction; extra_diag fractional",
+ "calibration": {
+  "sample": "911 Hunt & Reffert (2024) members of 68 open clusters within 500 pc, logAge50 7.0-8.3, Prob >= 0.9, RUWE < 1.4, G < 17.5, photometric binaries and parallax outliers removed",
+  "reference": "1068 high-latitude field dwarfs matched in G and BP-RP, ms-region fits with free [M/H]",
+  "fit": "XP61 + 2MASS JHKs in the fit_whitedwarf_companion frame, [M/H] = 0, age prior logAge50 +- 0.3 dex, fitted parallax, Gaussian E prior from the cluster A_V50",
+  "regression": "(1 + r_member) = (1 + r_field(Teff)) exp(c(Teff, x)), x from the cluster logAge50; Huber-weighted penalised Gauss-Newton",
+  "smoothing": {
+   "teff": 1000.0,
+   "wavelength": 1000.0
+  },
+  "folds": "10 folds of whole clusters",
+  "iterations": "labels refitted twice with out-of-fold corrections"
+ },
+ "validation": {
+  "statistic": "chi2 of the median member - field residual per Teff bin under the dwarf model covariance plus sampling errors, 63 channels, out-of-fold corrections",
+  "null_6000_7000K": [
+   27.92520062465136,
+   49.835201786679384
+  ],
+  "bins": {
+   "3000-3250": 24.5,
+   "3250-3500": 33.7,
+   "3500-3750": 31.8,
+   "3750-4000": 37.8,
+   "4000-4500": 31.1,
+   "4500-5000": 27.9,
+   "5000-5500": 23.4,
+   "5500-6000": 33.6,
+   "6000-6500": 27.9,
+   "6500-7000": 49.8
+  }
+ }
+}
