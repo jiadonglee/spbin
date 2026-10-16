@@ -1,11 +1,12 @@
-"""Pure-JAX stellar forward model: PARSEC tracks, network, hot table, likelihood atoms.
+"""Pure-JAX stellar forward model: PARSEC tracks, network, hot table, pms correction.
 
 Every function here is compiled with fixed shapes: a coeval pair is two
 components whose fluxes add with weight zero for a single star (a fit whose
 q is fixed at 0 compiles the one-component layout instead), channel masks
 are 0/1 weights, and the low-rank model-error basis always has all 12
-columns (4 per error term). A fit with no SPHEREx channel compiles the
-first 66 channels (XP61, J/H/Ks, W1/W2) only.
+columns (4 per error term), plus the pms term's column on the pms route.
+A fit with no SPHEREx channel compiles the first 66 channels (XP61, J/H/Ks,
+W1/W2) only.
 Outside their domain the components return safe finite values and a `valid`
 flag; the objective turns the flag into one large finite value.
 """
@@ -143,6 +144,28 @@ def predict_hot(arr, teff, logg, radius):
     return jnp.exp(ln_flux) * radius**2
 
 
+def knot_weights(knots, teff):
+    """Linear-interpolation weights (k,) on knots at a scalar Teff, held at the end knots."""
+    t = jnp.clip(teff, knots[0], knots[-1])
+    i = jnp.clip(search(knots, t, side="right") - 1, 0, knots.shape[0] - 2)
+    f = (t - knots[i]) / (knots[i + 1] - knots[i])
+    return (1 - f) * jax.nn.one_hot(i, knots.shape[0]) + f * jax.nn.one_hot(i + 1, knots.shape[0])
+
+
+def pms_youth(arr, age_gyr):
+    """Youth term x and taper t of the pms correction at one age."""
+    log_age = jnp.log10(age_gyr) + 9
+    x = jnp.clip(log_age, arr.pms_log_age_range[0], arr.pms_log_age_range[1]) - arr.pms_log_age_pivot
+    low, high = arr.pms_taper_log_age[0], arr.pms_taper_log_age[1]
+    return x, 1 - smoothstep((log_age - low) / (high - low))
+
+
+def pms_correction(arr, teff, age_gyr):
+    """ln-flux correction (64,) of the pms route at a scalar Teff: t(age) sum_k w_k (a_k + b_k x)."""
+    x, taper = pms_youth(arr, age_gyr)
+    return taper * (knot_weights(arr.pms_knots, teff) @ (arr.pms_a + x * arr.pms_b))
+
+
 def in_domain(arr, labels):
     """Network training-domain check for one labels row (or across boxes)."""
     inside = labels >= arr.boxes[:, :, 0]
@@ -182,8 +205,9 @@ def evaluate(arr, m1, q, age_gyr, feh, pair=True, channels=None):
     one-component branch. pair=False (static) evaluates the primary alone
     and ignores q, which gives the same result as q=0 without the second
     track lookup and network pass. channels=66 (static) predicts the
-    XP-head channels only. Returns safe finite values with `valid` False
-    wherever numpy would return None.
+    XP-head channels only. On the pms route each component carries its
+    youth correction on XP61 + J/H/Ks. Returns safe finite values with
+    `valid` False wherever numpy would return None.
     """
     masses = jnp.array([m1, m1 * jnp.maximum(q, 1e-30)] if pair else [m1])
     labels, logg, radius, track_valid = track(arr, masses, age_gyr, feh)
@@ -210,6 +234,9 @@ def evaluate(arr, m1, q, age_gyr, feh, pair=True, channels=None):
         components = (1 - weight[:, None]) * cool + weight[:, None] * hot
     else:
         components = cool
+    if arr.pms:
+        correction = jax.vmap(lambda t: pms_correction(arr, t, age_gyr))(safe_labels[:, 0])
+        components = components.at[:, :HOT_CHANNELS].multiply(jnp.exp(correction))
     components = jnp.where(component_ok[:, None], components, 0.0)
     flux_10pc = components.sum(axis=0)
     mg = labels[:, 1] + labels[:, 2]
@@ -220,13 +247,16 @@ def evaluate(arr, m1, q, age_gyr, feh, pair=True, channels=None):
                       beta, a_phot, ok)
 
 
-def error_factors(arr, teff, flux_10pc, scale):
-    """Low-rank model-error columns (n, 12) and diagonal variance for the first n channels.
+def error_factors(arr, teff, flux_10pc, scale, age_gyr=None):
+    """Low-rank model-error columns (n, 12; 13 on the pms route) and diagonal variance, first n channels.
 
     The primary's Teff selects the term weights: v2.1_cold below 3800 K,
     v2.1_warm above 4200 K, smoothstep blend in between, and with hot=True a
     further handover to the hot term over 7000--7498 K. Zero-weight terms
     leave zero columns, so the 12x12 Woodbury matrix stays fixed-shaped.
+    On the pms route a 13th column holds the primary's pms correction times
+    its amplitude scatter, and the variance gains the tapered extra_diag
+    term, both at the primary's Teff and the system age age_gyr.
     """
     warm = smoothstep((teff - ERROR_BLEND_K[0]) / (ERROR_BLEND_K[1] - ERROR_BLEND_K[0]))
     hot = (smoothstep((teff - HOT_BLEND_K[0]) / (HOT_BLEND_K[1] - HOT_BLEND_K[0]))
@@ -240,4 +270,12 @@ def error_factors(arr, teff, flux_10pc, scale):
     n = flux.shape[0]
     columns = flux[:, None] * arr.error_basis[:n] * column_scale
     variance = jnp.sum(weights * (flux[:, None] * arr.error_diag[:n])**2, axis=1)
+    if arr.pms:
+        _, taper = pms_youth(arr, age_gyr)
+        knots = knot_weights(arr.pms_knots, teff)
+        pattern = pms_correction(arr, teff, age_gyr)
+        column = (knots @ arr.pms_amplitude_scatter) * (flux[:HOT_CHANNELS] * pattern)
+        columns = jnp.concatenate([columns, jnp.zeros((n, 1)).at[:HOT_CHANNELS, 0].set(column)], axis=1)
+        diag = jnp.sqrt(knots @ arr.pms_extra_diag**2)
+        variance = variance.at[:HOT_CHANNELS].add((taper * flux[:HOT_CHANNELS] * diag)**2)
     return columns, variance

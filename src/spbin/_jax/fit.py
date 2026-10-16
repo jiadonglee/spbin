@@ -68,7 +68,7 @@ def _objective(theta, problem):
     prediction = stellar.evaluate(arr, mass, ratio, age, metal, pair=problem.pair, channels=n)
     attenuation = jnp.exp(-extinction * arr.extinction_curve[:n])
     columns, variance = stellar.error_factors(
-        arr, prediction.labels[0, 0], prediction.flux_10pc, (parallax / 100.0)**2)
+        arr, prediction.labels[0, 0], prediction.flux_10pc, (parallax / 100.0)**2, age)
     value, _, _ = likelihood.neg2_log_likelihood(
         problem.sed_flux[:n], problem.sed_error[:n], problem.mask[:n], parallax,
         prediction.flux_10pc, columns, variance, attenuation)
