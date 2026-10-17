@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from spbin import SED, StellarModel, WhiteDwarfModel
-from spbin.hrd import _region, fit_star, locate
+from spbin.extinction import EdenhoferPrior
+from spbin.hrd import MS_THRESHOLD, MS_THRESHOLD_DUST, _region, fit_star, locate
 
 FIXTURE = Path(__file__).parent / "fixtures" / "gaia_dr3_5148853253106611200.npz"
 
@@ -44,7 +45,7 @@ def _mock_binary(m1, q):
     pred = stellar.evaluate(m1, q, 5, 0)
     flux = pred["flux_10pc"] * .01
     g = -2.5 * np.log10(np.sum(10**(-0.4 * pred["M_G"]))) + 5
-    metadata = dict(phot_g_mean_mag=g, phot_bp_mean_mag=g + 0.6, phot_rp_mean_mag=g - 0.6)
+    metadata = dict(ra=0., dec=0., phot_g_mean_mag=g, phot_bp_mean_mag=g + 0.6, phot_rp_mean_mag=g - 0.6)
     return SED(flux, flux * .01, WhiteDwarfModel().support & stellar.support, 10, .02, "mock", metadata)
 
 
@@ -69,13 +70,32 @@ def test_ms_threshold_in_its_calibrated_configuration():
     result = fit_star(_mock_binary(.9, .7), feh=None, fit_parallax=True, extinction=None,
                       extinction_prior=(0., .03))
     statistic, threshold = result["detection_statistic"], result["threshold"]
-    assert threshold == {"ms+ms": 59.0, "wd+dwarf": None}
+    assert threshold == MS_THRESHOLD == {"ms+ms": 59.0, "wd+dwarf": None}
     assert statistic["ms+ms"] > threshold["ms+ms"]
     assert statistic["ms+ms"] == pytest.approx(result["objectives"]["dwarf"] - result["objectives"]["ms+ms"])
     single = fit_star(_mock_binary(.8, 0), feh=None, fit_parallax=True, extinction=None,
                       extinction_prior=(0., .03))
     assert single["detection_statistic"]["ms+ms"] < threshold["ms+ms"]
     assert fit_star(SED.load(FIXTURE), region="sdb")["detection_statistic"] is None
+
+
+class ClearQuery:
+    """Integrated map stand-in with no extinction along any line of sight."""
+
+    integrated = True
+    n_samples = None
+
+    def __call__(self, coords, mode="mean"):
+        return 0.
+
+
+def test_ms_threshold_under_the_dust_prior():
+    prior = EdenhoferPrior(ClearQuery(), sigma=.002)
+    result = fit_star(_mock_binary(.9, .7), feh=None, fit_parallax=True, extinction=None, dust_prior=prior)
+    assert result["threshold"] == MS_THRESHOLD_DUST == {"ms+ms": 102.0, "wd+dwarf": None}
+    assert result["detection_statistic"]["ms+ms"] > MS_THRESHOLD_DUST["ms+ms"]
+    single = fit_star(_mock_binary(.8, 0), feh=None, fit_parallax=True, extinction=None, dust_prior=prior)
+    assert single["detection_statistic"]["ms+ms"] < MS_THRESHOLD["ms+ms"]
 
 
 def test_unsupported_and_label_free_giant_return_no_fit():

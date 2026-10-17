@@ -359,7 +359,8 @@ objective(dwarf) − objective(composite) for MS+MS and DA+dwarf. Fitted with
 `feh=None, fit_parallax=True` and a fitted extinction, an MS+MS statistic
 above the returned `threshold` of 59 occurs for 0 of 197 independent
 RV-constant dwarfs and 22 per cent of 755 Gaia DR3 SB2s; near-twin pairs
-mostly stay below it. DA+dwarf has no calibrated threshold in this
+mostly stay below it. With the extinction under `dust_prior`, the returned
+threshold is 102, which 2 of the 197 exceed. DA+dwarf has no calibrated threshold in this
 region: a WD giving about 1 per cent of the G light is not detected, and
 WD-dominated pairs belong to the `wd` region
 ([validation](docs/validation-whitedwarf.md#main-sequence-region-of-fit_star)). `region=` overrides the location and `options=` passes arguments to

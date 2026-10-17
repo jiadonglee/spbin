@@ -188,6 +188,18 @@ independent.
 
 With free [M/H], the ms+ms threshold of 59 holds the 2% criterion on the
 independent controls, and `fit_star` returns it in that configuration.
+
+The training controls set 59 under map moments with the width floored at
+0.01. Under `dust_prior` at the map's own width, as `EdenhoferPrior` gives
+it, the fitted E stays on the map mean (fitted minus map E: −0.0001 to
++0.0013 at 16–84%), and a single dwarf can no longer redden to absorb a red
+excess. 6 of the 154 training and 4 of the 197 independent controls then
+exceed 59, against 3 and 0 in the calibration configuration. Refitting the
+single star from 14 starts leaves all 10 above 59. The same rule on the
+training controls gives 102, which 2 of the 197 independent controls exceed
+(1.0%); `fit_star` returns this threshold when the extinction is fitted
+under `dust_prior`. A 0.005 floor on the map width gives the same value.
+`scripts/ms_threshold_dust.py` runs this check.
 No wd+dwarf threshold does: fixing [M/H] at solar lets a WD absorb
 metallicity mismatch (independent controls reach 89), and with free
 [M/H] the independent maximum, 23, lies above the training maximum, 13.
