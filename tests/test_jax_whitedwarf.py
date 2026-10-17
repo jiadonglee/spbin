@@ -11,7 +11,7 @@ import equinox as eqx
 from scipy.optimize import minimize
 
 from spbin import SED, StellarModel, WhiteDwarfModel
-from spbin.extinction import EdenhoferPrior
+from spbin.extinction import EdenhoferPrior, extinction_curve
 from spbin.whitedwarf import DATA, _Hypothesis, _prepare
 from spbin.whitedwarf import fit_whitedwarf_companion as numpy_fit
 from spbin._jax import whitedwarf as jw
@@ -323,6 +323,31 @@ def test_pms_pair(wd):
                               (("dwarf",), stellar)):
         with pytest.raises(ValueError):
             jax_fit(sed, model=wd, stellar=model, hypotheses=hypotheses)
+
+
+def test_pms_single_starts_at_every_age(wd):
+    """A young near-main-sequence single under a narrow extinction prior above its
+    reddening: the three best grid seeds are old, and the young fit is reached from
+    the best seed of a young age."""
+    stellar = StellarModel(pms=True)
+    flux = (stellar.evaluate(.9, 0., .025, 0.)["flux_10pc"] * .01
+            * np.exp(-.1 * extinction_curve(stellar.wavelength_um)))
+    sed = SED(flux, flux * .01, wd.support & stellar.support, 10, .1, "mock")
+    options = dict(model=wd, stellar=stellar, hypotheses=("pms",), companion_age_gyr=None,
+                   extinction=None, extinction_prior=(.15, .005), fit_parallax=True)
+    result = jax_fit(sed, **options)
+    summaries_agree(numpy_fit(sed, **options), result)
+    assert abs(result["hypotheses"]["pms"]["companion"]["log_age"] - 7.4) < .1
+    p = _prepare(sed, wd, stellar, None, (.15, .005), None, None, True, None, None, False, None, None)
+    hyp = _Hypothesis(p, "pms", False, None, 0.)
+    template = jw._template(hyp)
+    problem = eqx.tree_at(lambda pr: pr.template, jw.build_problem(p, None), jnp.asarray(template))
+    seeds = jw._seeds(hyp, None)
+    thetas = np.tile(template, (len(seeds), 1))
+    thetas[:, [jw.SLOTS.index(k) for k in hyp.names]] = [[v[k] for k in hyp.names] for v in seeds]
+    scores = np.asarray(jw._scores(jnp.asarray(thetas), problem, jw.spec_of(hyp)))
+    best = np.argsort(scores, kind="stable")[:3]
+    assert all(seeds[i]["age"] / np.log(10) + 9 > 7.9 for i in best)
 
 
 def test_free_radius_and_input_checks(wd):

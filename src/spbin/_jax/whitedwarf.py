@@ -12,8 +12,9 @@ star and the coeval pair on StellarModel(pms=True). Model errors are taken
 at the observed flux and shared by light fraction, as in numpy.
 
 The search follows numpy: the seed grid is scored in one `vmap`, the best
-three seeds are refined by a scipy-semantics Nelder-Mead (maxfev 4000), and
-one restart runs from the best endpoint with the initial steps. The result
+three seeds (for the pms single with a free age, also the best seed of each
+age) are refined by a scipy-semantics Nelder-Mead (maxfev 4000), and one
+restart runs from the best endpoint with the initial steps. The result
 dict is rebuilt with the numpy model at the best endpoint numpy supports, so
 the reported objective is numpy's. A dust prior is pre-sampled on a parallax
 grid per star, as in `_jax.fit`.
@@ -488,7 +489,14 @@ def fit_hypothesis(hyp, problem, initial=None):
     thetas = np.tile(template, (len(seeds), 1))
     thetas[:, free] = [[v[k] for k in hyp.names] for v in seeds]
     scores = np.asarray(_scores(jnp.asarray(thetas), problem, spec))
-    order = np.argsort(scores, kind="stable")[:3]
+    ranked = np.argsort(scores, kind="stable")
+    order = ranked[:3]
+    if hyp.kind == "pms" and hyp.age is None:
+        # As numpy: the pms single also starts from the best seed of every age, after the
+        # three best; old seeds rank well near the main sequence and can all lie in the old basin.
+        ages = np.array([v["age"] for v in seeds])[ranked]
+        first = ranked[np.sort(np.unique(ages, return_index=True)[1])]
+        order = np.concatenate([order, first[~np.isin(first, order)]])
     order = order[scores[order] < 1e29]
     if not len(order):
         return dict(objective=np.inf, converged=False, hypothesis=hyp.kind), None
