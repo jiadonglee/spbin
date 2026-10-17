@@ -28,7 +28,7 @@ Repository = "https://github.com/jiadonglee/spbin"
 where = ["src"]
 
 [tool.setuptools.package-data]
-spbin = ["models/*.npz", "models/*.txt", "models/stellar/*.npz", "models/stellar/*.json", "models/hot/*.npz", "models/hot/*.json", "models/giant/*.npz", "models/giant/*.json", "models/subdwarf/*.npz", "models/subdwarf/*.json", "models/whitedwarf/*.npz", "models/whitedwarf/*.json"]
+spbin = ["models/*.npz", "models/*.txt", "models/stellar/*.npz", "models/stellar/*.json", "models/hot/*.npz", "models/hot/*.json", "models/pms/*.npz", "models/pms/*.json", "models/giant/*.npz", "models/giant/*.json", "models/subdwarf/*.npz", "models/subdwarf/*.json", "models/whitedwarf/*.npz", "models/whitedwarf/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
