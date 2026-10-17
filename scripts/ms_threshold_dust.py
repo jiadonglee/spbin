@@ -23,13 +23,15 @@ fraction above 59, 76 and 102 overall and in bins of the RV mass ratio.
     python scripts/ms_threshold_dust.py inputs   # SEDs and training moments (local data)
     python scripts/ms_threshold_dust.py dust     # Edenhofer moments still missing (needs the map)
     python scripts/ms_threshold_dust.py fit      # WORKERS processes -> fits.jsonl, resumes
-    python scripts/ms_threshold_dust.py reseed   # single-star refits of the exceedances
+    python scripts/ms_threshold_dust.py reseed   # single-star refits above RESEED_ABOVE, resumes
     python scripts/ms_threshold_dust.py summary  # -> summary.json
 
 Paths come from MS_DATA (data/whitedwarf), MS_TRAIN_DUST (training moments),
 MS_HOLDOUT_DUST (optional precomputed holdout moments), MS_CONTROLS (the
 validation_ms_*.jsonl calibration fits), MS_SAMPLE (controls or sb2) and
-MS_WORK.
+MS_WORK. RESEED_ABOVE (default 59) sets the statistic above which reseed
+refits; the pair refit can only raise the statistic, so the SB2 sample is
+reseeded from a lower value to catch stars that cross a threshold from below.
 """
 
 from concurrent.futures import ProcessPoolExecutor
@@ -67,6 +69,7 @@ FLOOR = dict(floor01=.01, floor=.005, map=0.)
 HYPOTHESES = ("dwarf", "ms+ms")
 THRESHOLD = 59.0
 THRESHOLDS = (59.0, 76.0, 102.0)
+RESEED_ABOVE = float(os.environ.get("RESEED_ABOVE", THRESHOLD))
 Q_BINS = (("<0.8", 0., .8), ("0.8-0.9", .8, .9), ("0.9-0.95", .9, .95), (">0.95", .95, np.inf))
 FALSE_POSITIVE = .02
 DWARF_LOGG = 4.1
@@ -317,16 +320,23 @@ def reseed_one(task):
 
 
 def reseed():
+    """Refit every fit whose statistic exceeds RESEED_ABOVE; resumes from reseed.json."""
     fits = read_fits()
     moments = json.loads((WORK / "dust.json").read_text())
     seds = load_seds()
+    path = WORK / "reseed.json"
+    out = json.loads(path.read_text()) if path.exists() else []
+    done = {(o["source_id"], o["config"]) for o in out}
     tasks = [(r["config"], r, fits[(r["source_id"], CALIBRATION[r["sample"]])], seds[r["source_id"]],
               moments[r["source_id"]])
-             for r in fits.values() if "failed" not in r and statistic(r) > THRESHOLD]
-    print(len(tasks), "refits", flush=True)
+             for key, r in fits.items() if "failed" not in r and statistic(r) > RESEED_ABOVE and key not in done]
+    print(len(tasks), "refits above", RESEED_ABOVE, flush=True)
     with ProcessPoolExecutor(WORKERS) as pool:
-        out = list(pool.map(reseed_one, tasks, chunksize=1))
-    (WORK / "reseed.json").write_text(json.dumps(out, indent=1) + "\n")
+        for i, o in enumerate(pool.map(reseed_one, tasks, chunksize=1)):
+            out.append(o)
+            path.write_text(json.dumps(out, indent=1) + "\n")
+            if (i + 1) % 50 == 0:
+                print(f"reseed {i + 1}/{len(tasks)}", flush=True)
     for o in sorted(out, key=lambda o: (o["sample"], o["config"], -o["stat"])):
         print(f"{o['sample']:11s} {o['config']:7s} {o['source_id']} Teff {o['teff']:5.0f} stat {o['stat']:7.1f} -> "
               f"{o['stat_reseeded']:7.1f}  dwarf {o['single']:8.1f} -> {o['single_reseeded']:8.1f} ({o['seed']}; "
@@ -408,31 +418,55 @@ def interval(k, n):
     return [float(beta.ppf(.025, k, n - k + 1)) if k > 0 else 0., float(beta.ppf(.975, k + 1, n - k)) if k < n else 1.]
 
 
+def share(above, subset):
+    k, n = int(np.sum(above & subset)), int(np.sum(subset))
+    return dict(k=k, n=n, fraction=k / n, interval=interval(k, n))
+
+
+def by_q(stat, q_rv):
+    """Share above each threshold, overall and in the bins of the RV mass ratio."""
+    return {f"{t:g}": {label: share(stat > t, (q_rv >= lo) & (q_rv < hi))
+                       for label, lo, hi in (("all", -np.inf, np.inf),) + Q_BINS}
+            for t in THRESHOLDS}
+
+
 def completeness():
     """Fraction of the SB2s above each threshold, overall and in bins of the
-    RV mass ratio, with the fitted q minus the RV ratio of those above."""
+    RV mass ratio, with the fitted q minus the RV ratio of those above; the
+    _reseeded entries take stat_reseeded from reseed.json where it exists and
+    the fitted statistic elsewhere."""
     controls = {c["source_id"]: c for c in json.loads((WORK / "controls.json").read_text())}
     fits, seds = read_fits(), load_seds()
+    reseeded = {}
+    if (WORK / "reseed.json").exists():
+        reseeded = {(o["source_id"], o["config"]): o for o in json.loads((WORK / "reseed.json").read_text())}
+
+    def stat_reseeded(row):
+        o = reseeded.get((row["source_id"], row["config"]))
+        return statistic(row) if o is None else o["stat_reseeded"]
+
     stored = {sid: c["calibration"]["dwarf"]["objective"] - c["calibration"]["ms+ms"]["objective"]
               for sid, c in controls.items()}
-    out = dict(n=len(controls), configs={})
+    out = dict(n=len(controls), reseed_above=RESEED_ABOVE, configs={})
     for config in ("gauss",) + DUST_CONFIGS:
         rows = [fits[(sid, config)] for sid in controls if (sid, config) in fits]
         ok = [r for r in rows if "failed" not in r]
         stat = np.array([statistic(r) for r in ok])
+        after = np.array([stat_reseeded(r) for r in ok])
+        done = np.array([(r["source_id"], config) in reseeded for r in ok])
         q_rv = np.array([controls[r["source_id"]]["q_rv"] for r in ok])
         q_fit = np.array([r["ms+ms"]["q"] for r in ok])
         c = dict(n=len(ok), failed=len(rows) - len(ok), converged={h: int(sum(r[h]["converged"] for r in ok))
                                                                    for h in HYPOTHESES},
-                 percentiles=percentiles(stat), above={})
+                 percentiles=percentiles(stat), percentiles_reseeded=percentiles(after),
+                 reseeded=dict(n=int(done.sum()), missing=int(np.sum(~done & (stat > RESEED_ABOVE))),
+                               reseeded_minus_fitted=percentiles((after - stat)[done], (0, 2, 16, 50, 84, 98, 100))),
+                 above=by_q(stat, q_rv), above_reseeded=by_q(after, q_rv),
+                 crossed={f"{t:g}": dict(down=int(np.sum((stat > t) & (after <= t))),
+                                         up=int(np.sum((stat <= t) & (after > t)))) for t in THRESHOLDS})
         for t in THRESHOLDS:
             above = stat > t
-            block = {}
-            for label, lo, hi in (("all", -np.inf, np.inf),) + Q_BINS:
-                k, n = int(np.sum(above & (q_rv >= lo) & (q_rv < hi))), int(np.sum((q_rv >= lo) & (q_rv < hi)))
-                block[label] = dict(k=k, n=n, fraction=k / n, interval=interval(k, n))
-            block["q_fit_minus_rv"] = percentiles(q_fit[above] - q_rv[above], (5, 50, 95))
-            c["above"][f"{t:g}"] = block
+            c["above"][f"{t:g}"]["q_fit_minus_rv"] = percentiles(q_fit[above] - q_rv[above], (5, 50, 95))
         c["e_minus_map_mean"] = {h: percentiles([r[h]["extinction_e"] - r[h]["map"][0] for r in ok]) for h in HYPOTHESES}
         if config == "gauss":
             c["minus_calibration_run"] = percentiles([statistic(r) - stored[r["source_id"]] for r in ok],
@@ -444,10 +478,11 @@ def completeness():
             c["minus_gauss"] = percentiles([statistic(r) - statistic(g) for r, g in pairs])
             for h in HYPOTHESES:
                 c[f"{h}_objective_minus_gauss"] = percentiles([r[h]["objective"] - g[h]["objective"] for r, g in pairs])
-            c["versus_gauss"] = {f"{t:g}": dict(both=sum(statistic(r) > t and statistic(g) > t for r, g in pairs),
-                                                only_here=sum(statistic(r) > t >= statistic(g) for r, g in pairs),
-                                                only_gauss=sum(statistic(g) > t >= statistic(r) for r, g in pairs))
-                                 for t in THRESHOLDS}
+            for key, f in (("versus_gauss", statistic), ("versus_gauss_reseeded", stat_reseeded)):
+                c[key] = {f"{t:g}": dict(both=sum(f(r) > t and f(g) > t for r, g in pairs),
+                                         only_here=sum(f(r) > t >= f(g) for r, g in pairs),
+                                         only_gauss=sum(f(g) > t >= f(r) for r, g in pairs))
+                          for t in THRESHOLDS}
             c["map_width"] = percentiles([r["dwarf"]["map"][1] for r in ok])
             regions = [r.get("region_at_map_mean") for r in ok]
             c["region_at_map_mean"] = {g: regions.count(g) for g in sorted(set(regions))}
@@ -455,8 +490,8 @@ def completeness():
             c["above_in_ms_at_map_mean"] = {f"{t:g}": dict(k=int(np.sum((stat > t) & in_ms)), n=int(in_ms.sum()))
                                             for t in THRESHOLDS}
         beyond = np.array([1000 / seds[r["source_id"]].parallax_mas >= MAP_EDGE_PC for r in ok])
-        c["above_beyond_map_edge"] = {f"{t:g}": dict(k=int(np.sum((stat > t) & beyond)), n=int(beyond.sum()))
-                                      for t in THRESHOLDS}
+        c["above_beyond_map_edge"] = {f"{t:g}": share(stat > t, beyond) for t in THRESHOLDS}
+        c["above_beyond_map_edge_reseeded"] = {f"{t:g}": share(after > t, beyond) for t in THRESHOLDS}
         out["configs"][config] = c
     (WORK / "summary.json").write_text(json.dumps(out, indent=1) + "\n")
     print(json.dumps(out, indent=1))
