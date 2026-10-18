@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 from scipy.optimize import minimize
 
 from .extinction import extinction_curve
@@ -131,8 +132,8 @@ class SubdwarfModel:
         lam = {name: table[f"filter/{name}_wave_nm"] for name in ("FUV", "NUV")}
         tr = {name: table[f"filter/{name}_trans"] for name in ("FUV", "NUV")}
         # pivot wavelengths convert AB magnitudes to photon-weighted F_lambda
-        self.galex_pivot_nm = {name: float(np.sqrt(np.trapezoid(tr[name] * lam[name], lam[name])
-                                                   / np.trapezoid(tr[name] / lam[name], lam[name])))
+        self.galex_pivot_nm = {name: float(np.sqrt(trapezoid(tr[name] * lam[name], lam[name])
+                                                   / trapezoid(tr[name] / lam[name], lam[name])))
                                for name in lam}
 
     def support(self, tier):

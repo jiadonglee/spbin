@@ -5,6 +5,7 @@ from itertools import product
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 from scipy.optimize import minimize
 
 from .extinction import extinction_curve
@@ -62,8 +63,8 @@ class WhiteDwarfModel:
             weight = np.interp(wave, lam, trans, left=0, right=0) * wave
             self.passbands[name] = weight / weight.sum()
             if name in ("FUV", "NUV"):
-                self.galex_pivot_nm[name] = float(np.sqrt(np.trapezoid(trans * lam, lam)
-                                                        / np.trapezoid(trans / lam, lam)))
+                self.galex_pivot_nm[name] = float(np.sqrt(trapezoid(trans * lam, lam)
+                                                        / trapezoid(trans / lam, lam)))
 
     def physical(self, teff, mass):
         """Cooling-model radius, gravity and age; no extrapolation."""
