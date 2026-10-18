@@ -170,7 +170,7 @@ def download(source_id=None, *, ra=None, dec=None, radius_arcsec=2.0,
             if not raw.exists():
                 from astroquery.gaia import Gaia
                 products = Gaia.load_data(ids=[source_id], data_release="Gaia DR3",
-                                          retrieval_type="XP_CONTINUOUS", data_structure="RAW",
+                                          retrieval_type="XP_CONTINUOUS", data_structure="DATAMODEL_GAIA",
                                           format="votable", verbose=False)
                 tables = [item.to_table() for items in products.values() for item in items]
                 if not tables:
