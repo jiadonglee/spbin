@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 from scipy.optimize import minimize
 
 from .extinction import extinction_curve
@@ -131,8 +132,8 @@ class SubdwarfModel:
         lam = {name: table[f"filter/{name}_wave_nm"] for name in ("FUV", "NUV")}
         tr = {name: table[f"filter/{name}_trans"] for name in ("FUV", "NUV")}
         # pivot wavelengths convert AB magnitudes to photon-weighted F_lambda
-        self.galex_pivot_nm = {name: float(np.sqrt(np.trapezoid(tr[name] * lam[name], lam[name])
-                                                   / np.trapezoid(tr[name] / lam[name], lam[name])))
+        self.galex_pivot_nm = {name: float(np.sqrt(trapezoid(tr[name] * lam[name], lam[name])
+                                                   / trapezoid(tr[name] / lam[name], lam[name])))
                                for name in lam}
 
     def support(self, tier):
@@ -262,33 +263,23 @@ def blue_xp(sed, cache_dir="data"):
 def galex(sed, cache_dir="data", radius_arcsec=3.0):
     """GALEX GR6/7 AIS FUV and NUV for the source: {band: (AB mag, error, usable)}.
 
-    Queries VizieR II/335/galex_ais around the Gaia position and takes the nearest match within
-    radius_arcsec. A band is usable when it is measured, fainter than the 10 per cent local roll-off and
-    its artifact flag is at most 1 (detector edge). The result is cached as galex.json.
+    Crossmatches VizieR II/335/galex_ais through spbin.uv.crossmatch_uv: the Gaia position is moved by its
+    proper motion to the GALEX epoch, and a match to more than one GALEX source leaves both bands unusable.
+    The nearest match gives each band. A band is usable when it is measured, fainter than the 10 per cent
+    local roll-off and its artifact flag is present and at most 1 (detector edge). The crossmatch is cached
+    in cache_dir/<source_id>/galex.
     """
-    directory = Path(cache_dir).expanduser() / str(sed.source_id)
-    path = directory / "galex.json"
-    if path.exists():
-        return {k: tuple(v) for k, v in json.loads(path.read_text()).items()}
-    import astropy.units as u
-    from astropy.coordinates import SkyCoord
-    from astroquery.vizier import Vizier
+    from .uv import crossmatch_uv, source_row
 
-    coord = SkyCoord(float(sed.metadata["ra"]) * u.deg, float(sed.metadata["dec"]) * u.deg)
-    tables = Vizier(columns=["_r", "FUVmag", "e_FUVmag", "NUVmag", "e_NUVmag", "Fafl", "Nafl"], row_limit=20
-                    ).query_region(coord, radius=radius_arcsec * u.arcsec, catalog="II/335/galex_ais")
+    directory = Path(cache_dir).expanduser() / str(sed.source_id) / "galex"
+    record = crossmatch_uv(source_row(sed), cache_dir=directory, catalogues=("galex",),
+                           radius_arcsec=radius_arcsec)[str(sed.source_id)]["galex"]
     out = {"FUV": (np.nan, np.nan, False), "NUV": (np.nan, np.nan, False)}
-    if tables and len(tables[0]):
-        row = tables[0][int(np.argmin(np.asarray(tables[0]["_r"], float)))]
-        for band, flag in (("FUV", "Fafl"), ("NUV", "Nafl")):
-            mag, err = row[f"{band}mag"], row[f"e_{band}mag"]
-            if np.ma.is_masked(mag) or np.ma.is_masked(err):
-                continue
-            mag, err = float(mag), float(err)
-            artifact = int(0 if np.ma.is_masked(row[flag]) else row[flag])
-            out[band] = (mag, err, bool(mag > GALEX_BRIGHT[band] and artifact <= 1 and err > 0))
-    directory.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out))
+    if record["matches"]:
+        for band, value in record["matches"][0]["bands"].items():
+            mag, err = value["mag_ab"], value["mag_error"]
+            if mag is not None and err is not None and np.isfinite([mag, err]).all():
+                out[band] = (float(mag), float(err), value["usable"])
     return out
 
 
@@ -400,19 +391,20 @@ class _Problem:
         coarse[red] = model_coarse[red] * xp_obs[-1] / edge[1]
         return coarse
 
-    def _cool_coarse(self, xp_obs, teff):
-        """Coarse spectrum of a cool star: its XP channels in 392-992 nm, blackbodies at Teff beyond."""
-        coarse = np.exp(np.interp(self.coarse, self.xp_nm, np.log(np.maximum(xp_obs, 1e-300))))
+    def _cool_coarse(self, xp, teff, e):
+        """Reddened coarse spectrum of a cool star from its unreddened XP channels: the channels in 392-992 nm,
+        blackbodies at Teff beyond, then the extinction of each coarse wavelength."""
+        coarse = np.exp(np.interp(self.coarse, self.xp_nm, np.log(np.maximum(xp, 1e-300))))
         blue, red = self.coarse < self.xp_nm[0], self.coarse > self.xp_nm[-1]
         bb = _planck(self.coarse, teff)
-        coarse[blue] = bb[blue] * np.mean(xp_obs[:3]) / np.mean(_planck(self.xp_nm[:3], teff))
-        coarse[red] = bb[red] * xp_obs[-1] / _planck(self.xp_nm[-1], teff)
-        return coarse
+        coarse[blue] = bb[blue] * np.mean(xp[:3]) / np.mean(_planck(self.xp_nm[:3], teff))
+        coarse[red] = bb[red] * xp[-1] / _planck(self.xp_nm[-1], teff)
+        return coarse * np.exp(-e * self.sdm.coarse_curve)
 
     def _cool(self, full, columns_full, variance_full, teff, e):
         att_full = np.exp(-e * self.curve_full[:len(full)])
         obs_full = full * att_full
-        coarse = self._cool_coarse(obs_full[:N_XP], teff)
+        coarse = self._cool_coarse(full[:N_XP], teff, e)
         blue = np.interp(self.sdm.blue_wavelength_nm, self.coarse, coarse)
         xf, xv = self._extras(coarse, blue, COMPANION_UV_ERROR, COMPANION_UV_ERROR)
         att = att_full[self.idx]
@@ -526,7 +518,7 @@ class _Problem:
         if not np.isfinite(f).all():
             return None
         frac_columns = np.nan_to_num(frac_columns)
-        coarse = self._cool_coarse(full[:N_XP], teff)
+        coarse = self._cool_coarse(np.exp(lns) * shape[:N_XP], teff, e)
         columns = np.zeros((len(self.y), frac_columns.shape[1]))
         columns[:self.n_channel] = frac_columns[self.idx] * f[:, None]
         flux, variance = [f], [frac_diag[self.idx] * f**2]
@@ -609,7 +601,7 @@ class _Hypothesis:
                 return None
             comps.append(sd)
         elif self.name == "fg_giant":
-            # a coeval companion shares the giant's [M/H], within the network's range
+            # the companion shares the giant's [M/H], within the network's range; its age is free
             age = np.exp(v["lnage"])
             low_age, high_age = p.stellar.age_range_gyr
             if not low_age <= age <= high_age:
@@ -804,9 +796,11 @@ def fit_subdwarf_companion(sed, *, companions=("dwarf", "subgiant"), tiers=TIERS
     age and its radius from the isochrone, at the shared parallax and extinction. Its blue XP channels and
     GALEX fluxes come from the hot UV table (HotUV: CK04 and TLUSTY through the XP operator, relative to its
     392 nm channel; MS_BLUE_ERROR, MS_GALEX_ERROR). The single giant is re-polished from it as from sdb+giant.
+    It has no WISE fluxes and takes use_wise=False.
 
     fg_ms=True (with "giant" in companions) adds "fg+giant": the template giant plus an F/G/K main-sequence star
-    through StellarModel, coeval with the giant and at its [M/H] (clipped to -1-0.5), with free mass and age. Its
+    through StellarModel at the giant's [M/H] (clipped to -1-0.5), with free mass and age. The template giant
+    carries no age, so the star's age is not tied to the giant's evolutionary state. Its
     blue XP channels come from the empirical colour table of APOGEE dwarfs (CoolUV, 4400-7500 K; table scatter and
     FG_BLUE_FLOOR), its GALEX fluxes from a blackbody joined to XP (COMPANION_UV_ERROR). This is the cool
     alternative to the sdB below the hot main-sequence star (>= 6800 K), whose range it meets.
@@ -866,6 +860,8 @@ def _prepare(sed, companions, tiers, model, stellar, template, giant_template, p
         template = GiantTemplate()
     if hot_ms and "giant" not in companions:
         raise ValueError("hot_ms compares a hot main-sequence star with the sdB beside a giant: add 'giant'")
+    if hot_ms and use_wise:
+        raise ValueError("hot_ms has no WISE fluxes: every hypothesis must share the channels, so use_wise=False")
     if fg_ms and "giant" not in companions:
         raise ValueError("fg_ms compares an F/G/K main-sequence star with the sdB beside a giant: add 'giant'")
     if "giant" in companions and giant_template is None:
@@ -1016,7 +1012,7 @@ def _fit_ms_giant(p, e0):
 
 
 def _fit_fg_giant(p, e0):
-    """F/G/K main-sequence star + template giant, the star coeval with the giant and at its [M/H]. Each
+    """F/G/K main-sequence star + template giant, the star at the giant's [M/H] with a free age. Each
     FG_MASSES x FG_AGES lattice star at a giant's [M/H] is paired with the giants of that [M/H] (GIANT_LATTICE and
     the single giant's), each scaled by linear least squares to the data minus the star; the three best giants per
     star get the full objective, and the N_POLISH best points are polished in all parameters."""

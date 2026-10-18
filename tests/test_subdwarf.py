@@ -260,6 +260,8 @@ def test_inputs_outside_the_route_are_refused(sdm, stellar):
         fit_subdwarf_companion(sed, model=sdm, companions=("whitedwarf",), extinction=0.0)
     with pytest.raises(ValueError):       # the hot main-sequence star is the giant's alternative to the sdB
         fit_subdwarf_companion(sed, model=sdm, companions=("dwarf",), extinction=0.0, hot_ms=True)
+    with pytest.raises(ValueError, match="WISE"):
+        fit_subdwarf_companion(sed, model=sdm, companions=("giant",), extinction=0.0, hot_ms=True, use_wise=True)
     with pytest.raises(ValueError):
         fit_subdwarf_companion(sed, model=sdm, companions=("dwarf",), extinction=0.0, fg_ms=True)
     with pytest.raises(ValueError):       # a fitted E needs one prior
@@ -304,3 +306,31 @@ def test_dark_companion_of_a_subdwarf():
     a0 = photocentre_a0(0.47, 0.6, 1.0, 600.0, 3.0)     # companion dark in G: photocentre on the subdwarf
     out = solve_dark_companion(a0, 3.0, 600.0, 0.47)
     assert abs(out["m2"] - 0.6) < 1e-6
+
+
+def test_cool_companion_uv_takes_its_own_extinction(sdm, stellar):
+    """The blackbody beyond the XP range is reddened at its own wavelength, not at the joining channel's."""
+    from spbin.subdwarf import _Problem
+    sed = SED(np.ones(168), np.ones(168), np.ones(168, bool), 10.0, 0.1)
+    p = _Problem(sed, sdm, stellar, None, None, sed.fit_mask(), None, None, (10.0, 0.1), False,
+                 None, None, None, ({}, {}))
+    clear, red = p.dwarf(1.0, 5.0, 0.0, 0.01, 0.0), p.dwarf(1.0, 5.0, 0.0, 0.01, 0.3)
+    ratio = red["coarse"] / clear["coarse"]
+    expected = np.exp(-0.3 * sdm.coarse_curve)
+    beyond = (p.coarse < p.xp_nm[0]) | (p.coarse > p.xp_nm[-1])
+    np.testing.assert_allclose(ratio[beyond], expected[beyond], rtol=1e-9)
+    inside = ~beyond
+    np.testing.assert_allclose(ratio[inside], expected[inside], rtol=0.02)
+    galex = {band: sdm.passband(red["coarse"], band) / sdm.passband(clear["coarse"], band) for band in ("FUV", "NUV")}
+    for band, value in galex.items():
+        assert value == pytest.approx(sdm.passband(clear["coarse"] * expected, band)
+                                      / sdm.passband(clear["coarse"], band), rel=1e-9)
+
+
+def test_luminous_pair_error_is_nan_when_a_step_leaves_the_branch():
+    a0 = photocentre_a0(0.47, 1.0, 0.8, 365.25, 10.0)
+    rows = {r["branch"]: r for r in solve_luminous_pair(a0, 10.0, 365.25, 1.0, 0.8, errors=dict(a0=3.0))}
+    row = rows["B<beta"]
+    assert row["m1"] == pytest.approx(0.47, rel=1e-6)
+    assert np.isnan(row["sigma_terms"]["a0"])
+    assert np.isnan(row["sigma_m1"])

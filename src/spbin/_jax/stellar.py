@@ -55,7 +55,8 @@ def bilinear(teff_ax, logg_ax, values, teff, logg):
     y = (logg - logg_ax[j]) / (logg_ax[j + 1] - logg_ax[j])
     corners = values[i, j], values[i + 1, j], values[i, j + 1], values[i + 1, j + 1]
     weights = (1 - x) * (1 - y), x * (1 - y), (1 - x) * y, x * y
-    terms = [w[...] * c for w, c in zip(weights, corners)]
+    # A missing neighbour contributes nothing at an exact supported node.
+    terms = [w * jnp.where(w != 0, c, 0.0) for w, c in zip(weights, corners)]
     return terms[0] + terms[1] + terms[2] + terms[3]
 
 

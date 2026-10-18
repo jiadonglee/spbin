@@ -270,7 +270,8 @@ def solve_luminous_pair(a0_mas, parallax_mas, period_day, m2, beta, *, errors=No
     is A = a0 / (parallax P**(2/3)) = M_tot**(1/3) |B - beta|. Returns one dict per branch, 'B>beta' (the
     photocentre moves with star 2) and 'B<beta' (with star 1): m1, B, m_tot and a_mas, NaN where the branch
     has no root. errors={'a0': s, 'parallax': s, 'm2': s, 'beta': s} adds 'sigma_m1', the quadrature sum of
-    the m1 changes for one-sigma steps in each, and 'dm1_dbeta'.
+    the m1 changes for one-sigma steps in each (NaN when a step leaves the branch without a root), and
+    'dm1_dbeta'.
     """
     a_obs = a0_mas / (parallax_mas * (period_day / 365.25)**(2 / 3))
     out = []
@@ -287,7 +288,7 @@ def solve_luminous_pair(a0_mas, parallax_mas, period_day, m2, beta, *, errors=No
                 shifted = dict(base, **{key: base[key] + sigma})
                 a_s = shifted["a0"] / (shifted["parallax"] * (period_day / 365.25)**(2 / 3))
                 terms[key] = _branch_mass(sign, a_s, shifted["m2"], shifted["beta"]) - m1
-            row["sigma_m1"] = float(np.sqrt(np.nansum([t * t for t in terms.values()])))
+            row["sigma_m1"] = float(np.sqrt(np.sum([t * t for t in terms.values()])))
             row["sigma_terms"] = {k: float(v) for k, v in terms.items()}
             h = 1e-4
             row["dm1_dbeta"] = float((_branch_mass(sign, a_obs, m2, beta + h) - m1) / h)

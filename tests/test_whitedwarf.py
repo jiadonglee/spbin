@@ -186,3 +186,10 @@ def test_uv_fit_error_outside_calibration_temperature_range(wd):
     warm=p.white_dwarf(18000,.6,None,None,.01,0.)
     assert hot["variance"][-1]==pytest.approx((.5*hot["flux"][-1])**2)
     assert warm["variance"][-1]==pytest.approx((wd.calibration["uv_diag"][0]*warm["flux"][-1])**2)
+
+
+def test_models_build_without_numpy_2_integration(monkeypatch):
+    from spbin import SubdwarfModel
+    monkeypatch.delattr(np, "trapezoid", raising=False)
+    WhiteDwarfModel()
+    SubdwarfModel()

@@ -162,14 +162,19 @@ def crossmatch_uv(sources, *, cache_dir="data/uv", catalogues=("galex", "swift",
     return result
 
 
-def download_uv(sed, *, cache_dir="data", **kwargs):
-    """Crossmatch one SED and attach the returned records to metadata['uv']."""
+def source_row(sed):
+    """One-row crossmatch_uv input from an SED's Gaia position and proper motion."""
     from astropy.table import Table
 
     row = {key: sed.metadata[key] for key in ("ra", "dec", "pmra", "pmdec", "ref_epoch")
            if key in sed.metadata}
     row["source_id"] = str(sed.source_id)
-    result = crossmatch_uv(Table(rows=[row]),
+    return Table(rows=[row])
+
+
+def download_uv(sed, *, cache_dir="data", **kwargs):
+    """Crossmatch one SED and attach the returned records to metadata['uv']."""
+    result = crossmatch_uv(source_row(sed),
                           cache_dir=Path(cache_dir).expanduser()/str(sed.source_id)/"uv", **kwargs)
     sed.metadata["uv"] = result[str(sed.source_id)]
     return sed.metadata["uv"]
