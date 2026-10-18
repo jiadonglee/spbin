@@ -400,19 +400,20 @@ class _Problem:
         coarse[red] = model_coarse[red] * xp_obs[-1] / edge[1]
         return coarse
 
-    def _cool_coarse(self, xp_obs, teff):
-        """Coarse spectrum of a cool star: its XP channels in 392-992 nm, blackbodies at Teff beyond."""
-        coarse = np.exp(np.interp(self.coarse, self.xp_nm, np.log(np.maximum(xp_obs, 1e-300))))
+    def _cool_coarse(self, xp, teff, e):
+        """Reddened coarse spectrum of a cool star from its unreddened XP channels: the channels in 392-992 nm,
+        blackbodies at Teff beyond, then the extinction of each coarse wavelength."""
+        coarse = np.exp(np.interp(self.coarse, self.xp_nm, np.log(np.maximum(xp, 1e-300))))
         blue, red = self.coarse < self.xp_nm[0], self.coarse > self.xp_nm[-1]
         bb = _planck(self.coarse, teff)
-        coarse[blue] = bb[blue] * np.mean(xp_obs[:3]) / np.mean(_planck(self.xp_nm[:3], teff))
-        coarse[red] = bb[red] * xp_obs[-1] / _planck(self.xp_nm[-1], teff)
-        return coarse
+        coarse[blue] = bb[blue] * np.mean(xp[:3]) / np.mean(_planck(self.xp_nm[:3], teff))
+        coarse[red] = bb[red] * xp[-1] / _planck(self.xp_nm[-1], teff)
+        return coarse * np.exp(-e * self.sdm.coarse_curve)
 
     def _cool(self, full, columns_full, variance_full, teff, e):
         att_full = np.exp(-e * self.curve_full[:len(full)])
         obs_full = full * att_full
-        coarse = self._cool_coarse(obs_full[:N_XP], teff)
+        coarse = self._cool_coarse(full[:N_XP], teff, e)
         blue = np.interp(self.sdm.blue_wavelength_nm, self.coarse, coarse)
         xf, xv = self._extras(coarse, blue, COMPANION_UV_ERROR, COMPANION_UV_ERROR)
         att = att_full[self.idx]
@@ -526,7 +527,7 @@ class _Problem:
         if not np.isfinite(f).all():
             return None
         frac_columns = np.nan_to_num(frac_columns)
-        coarse = self._cool_coarse(full[:N_XP], teff)
+        coarse = self._cool_coarse(np.exp(lns) * shape[:N_XP], teff, e)
         columns = np.zeros((len(self.y), frac_columns.shape[1]))
         columns[:self.n_channel] = frac_columns[self.idx] * f[:, None]
         flux, variance = [f], [frac_diag[self.idx] * f**2]

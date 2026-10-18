@@ -304,3 +304,23 @@ def test_dark_companion_of_a_subdwarf():
     a0 = photocentre_a0(0.47, 0.6, 1.0, 600.0, 3.0)     # companion dark in G: photocentre on the subdwarf
     out = solve_dark_companion(a0, 3.0, 600.0, 0.47)
     assert abs(out["m2"] - 0.6) < 1e-6
+
+
+def test_cool_companion_uv_takes_its_own_extinction(sdm, stellar):
+    """The blackbody beyond the XP range is reddened at its own wavelength, not at the joining channel's."""
+    from spbin.subdwarf import _Problem
+    sed = SED(np.ones(168), np.ones(168), np.ones(168, bool), 10.0, 0.1)
+    p = _Problem(sed, sdm, stellar, None, None, sed.fit_mask(), None, None, (10.0, 0.1), False,
+                 None, None, None, ({}, {}))
+    clear, red = p.dwarf(1.0, 5.0, 0.0, 0.01, 0.0), p.dwarf(1.0, 5.0, 0.0, 0.01, 0.3)
+    ratio = red["coarse"] / clear["coarse"]
+    expected = np.exp(-0.3 * sdm.coarse_curve)
+    beyond = (p.coarse < p.xp_nm[0]) | (p.coarse > p.xp_nm[-1])
+    np.testing.assert_allclose(ratio[beyond], expected[beyond], rtol=1e-9)
+    inside = ~beyond
+    np.testing.assert_allclose(ratio[inside], expected[inside], rtol=0.02)
+    galex = {band: sdm.passband(red["coarse"], band) / sdm.passband(clear["coarse"], band) for band in ("FUV", "NUV")}
+    for band, value in galex.items():
+        assert value == pytest.approx(sdm.passband(clear["coarse"] * expected, band)
+                                      / sdm.passband(clear["coarse"], band), rel=1e-9)
+
