@@ -260,6 +260,8 @@ def test_inputs_outside_the_route_are_refused(sdm, stellar):
         fit_subdwarf_companion(sed, model=sdm, companions=("whitedwarf",), extinction=0.0)
     with pytest.raises(ValueError):       # the hot main-sequence star is the giant's alternative to the sdB
         fit_subdwarf_companion(sed, model=sdm, companions=("dwarf",), extinction=0.0, hot_ms=True)
+    with pytest.raises(ValueError, match="WISE"):
+        fit_subdwarf_companion(sed, model=sdm, companions=("giant",), extinction=0.0, hot_ms=True, use_wise=True)
     with pytest.raises(ValueError):
         fit_subdwarf_companion(sed, model=sdm, companions=("dwarf",), extinction=0.0, fg_ms=True)
     with pytest.raises(ValueError):       # a fitted E needs one prior

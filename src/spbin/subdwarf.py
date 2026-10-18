@@ -796,6 +796,7 @@ def fit_subdwarf_companion(sed, *, companions=("dwarf", "subgiant"), tiers=TIERS
     which the template does not predict), plus blue=(flux, error) from blue_xp() and galex= from galex().
     GALEX needs the pure-hydrogen tier, the only one with NUV. A companion's GALEX flux, and its blue XP
     flux unless it is a giant, is a blackbody joined to its XP spectrum (COMPANION_UV_ERROR).
+    It has no WISE fluxes and takes use_wise=False.
     screening=True is for classifying many stars by the objectives, beta_G and preferred hypothesis alone:
     the Teff_sd profile has one pass of nodes at SCREEN_COARSE_K, looser node tolerances (SCREEN_NODE) and
     no refinement around the minimum, and the subdwarf hypotheses carry no `ranges`; the final polish is
@@ -859,6 +860,8 @@ def _prepare(sed, companions, tiers, model, stellar, template, giant_template, p
     sdm = SubdwarfModel() if model is None else model
     stellar = StellarModel() if stellar is None else stellar
     companions = tuple(companions)
+    if hot_ms and use_wise:
+        raise ValueError("hot_ms has no WISE fluxes: every hypothesis must share the channels, so use_wise=False")
     if any(c not in COMPANIONS for c in companions):
         raise ValueError(f"companions must be drawn from {COMPANIONS}")
     tiers = tuple(tiers)
