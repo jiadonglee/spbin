@@ -48,6 +48,10 @@ MS_THRESHOLD_DUST = {"ms+ms": 102.0, "wd+dwarf": None}
 # pms corrections; by 1.1% with a 0.3 dex cluster-age prior. 12 of 154
 # photometric binaries among the members exceed it, 3 of the 76 in the region.
 PMS_THRESHOLD = {"pms+pms": 25.0}
+# Options of the WD-route frame the calibrations above set themselves; any other
+# option (data channels, models, priors, hypotheses) leaves them uncalibrated.
+CALIBRATED_OPTIONS = {"extinction", "extinction_prior", "dust_prior", "fit_parallax",
+                      "companion_age_gyr", "companion_feh"}
 
 
 @lru_cache(maxsize=1)
@@ -260,13 +264,15 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     simplest hypothesis within `tie` of the lowest. Objectives are
     comparable only inside one region. In the ms region,
     detection_statistic holds objective(dwarf) - objective(composite) for
-    ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit runs in its
-    calibrated configuration (feh=None, fit_parallax=True and a fitted
-    extinction), MS_THRESHOLD_DUST when that extinction is fitted under
-    dust_prior, otherwise None. In the pms region it holds
+    ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit, after
+    options, runs in its calibrated configuration (free age and [M/H],
+    fit_parallax=True and a fitted extinction on XP and 2MASS),
+    MS_THRESHOLD_DUST when that extinction is fitted under dust_prior,
+    otherwise None. In the pms region it holds
     objective(pms) - objective(pms+pms), and threshold holds PMS_THRESHOLD
     with [M/H] at 0, a free age (with or without age_prior), fit_parallax=True
-    and a fitted extinction.
+    and a fitted extinction. Options outside CALIBRATED_OPTIONS leave the
+    threshold None.
     """
     options = dict(options or {})
     guess = extinction if extinction is not None else extinction_prior[0] if extinction_prior else 0.0
@@ -291,7 +297,8 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
             kwargs.update(stellar=_pms_stellar(), companion_feh=0.0 if feh is None else feh)
             if age_prior is not None:
                 kwargs["companion_prior"] = dict(log_age=age_prior)
-        result = fit_whitedwarf_companion(sed, **dict(kwargs, **options))
+        call = dict(kwargs, **options)
+        result = fit_whitedwarf_companion(sed, **call)
         objectives = {k: r["objective"] for k, r in result["hypotheses"].items()}
     elif region == "hot_ms":
         if extinction_prior is not None:
@@ -322,12 +329,14 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
                delta={k: v - best for k, v in objectives.items()},
                preferred=_preferred(objectives, tie) if region != "giant" else
                ("giant" if objectives["giant"] <= best + tie else "giant+companion"))
+    calibrated = (region in ("ms", "pms") and set(options) <= CALIBRATED_OPTIONS and call["fit_parallax"]
+                  and call["extinction"] is None and call["companion_age_gyr"] is None)
     if region == "ms" and set(REGIONS["ms"]) <= set(objectives):
         out["detection_statistic"] = {k: objectives["dwarf"] - objectives[k] for k in ("ms+ms", "wd+dwarf")}
-        if feh is None and fit_parallax and extinction is None:
-            out["threshold"] = dict(MS_THRESHOLD_DUST if dust_prior is not None else MS_THRESHOLD)
+        if calibrated and call["companion_feh"] is None:
+            out["threshold"] = dict(MS_THRESHOLD_DUST if call["dust_prior"] is not None else MS_THRESHOLD)
     if region == "pms" and set(REGIONS["pms"]) <= set(objectives):
         out["detection_statistic"] = {"pms+pms": objectives["pms"] - objectives["pms+pms"]}
-        if feh in (None, 0.0) and age_gyr is None and fit_parallax and extinction is None:
+        if calibrated and call["companion_feh"] == 0.0:
             out["threshold"] = dict(PMS_THRESHOLD)
     return out

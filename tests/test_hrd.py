@@ -5,7 +5,7 @@ import pytest
 
 from spbin import SED, StellarModel, WhiteDwarfModel
 from spbin.extinction import EdenhoferPrior
-from spbin.hrd import MS_THRESHOLD, MS_THRESHOLD_DUST, _region, fit_star, locate
+from spbin.hrd import MS_THRESHOLD, MS_THRESHOLD_DUST, PMS_THRESHOLD, _region, fit_star, locate
 
 FIXTURE = Path(__file__).parent / "fixtures" / "gaia_dr3_5148853253106611200.npz"
 
@@ -105,3 +105,38 @@ def test_unsupported_and_label_free_giant_return_no_fit():
     assert giant["result"] is None and "labels" in giant["location"]["reason"]
     with pytest.raises(ValueError):
         fit_star(sed, region="nowhere")
+
+
+def _stub_route(monkeypatch):
+    """Stand-in for the WD-route frame with fixed objectives for the asked hypotheses."""
+    def route(sed, *, hypotheses, **kwargs):
+        return dict(hypotheses={h: dict(objective=float(i)) for i, h in enumerate(hypotheses)})
+    monkeypatch.setattr("spbin.hrd.fit_whitedwarf_companion", route)
+
+
+@pytest.mark.parametrize("kwargs, options, expected", [
+    (dict(feh=None, fit_parallax=True, extinction=None), {}, MS_THRESHOLD),
+    (dict(feh=0.0), dict(companion_feh=None, fit_parallax=True, extinction=None), MS_THRESHOLD),
+    (dict(feh=None, fit_parallax=True, extinction=None), dict(dust_prior=object()), MS_THRESHOLD_DUST),
+    (dict(feh=None, fit_parallax=True, extinction=None), dict(companion_feh=0.0), None),
+    (dict(feh=None, fit_parallax=True, extinction=None), dict(fit_parallax=False), None),
+    (dict(feh=None, fit_parallax=True, extinction=None), dict(extinction=0.1), None),
+    (dict(feh=None, fit_parallax=True, extinction=None), dict(use_spherex=True), None),
+    (dict(feh=None, fit_parallax=True, extinction=None, age_gyr=5.0), {}, None),
+])
+def test_ms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
+    _stub_route(monkeypatch)
+    result = fit_star(_mock_binary(.9, .7), region="ms", options=options, **kwargs)
+    assert result["threshold"] == (None if expected is None else dict(expected))
+
+
+@pytest.mark.parametrize("kwargs, options, expected", [
+    (dict(fit_parallax=True, extinction=None), {}, PMS_THRESHOLD),
+    (dict(fit_parallax=True, extinction=None), dict(companion_feh=-0.3), None),
+    (dict(fit_parallax=True, extinction=None), dict(companion_age_gyr=0.05), None),
+    (dict(fit_parallax=True, extinction=None), dict(blue=(np.ones(5), np.ones(5))), None),
+])
+def test_pms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
+    _stub_route(monkeypatch)
+    result = fit_star(_mock_binary(.9, .7), region="pms", options=options, **kwargs)
+    assert result["threshold"] == (None if expected is None else dict(expected))
