@@ -15,15 +15,23 @@ both sets with the dwarf and ms+ms hypotheses under the dust prior:
 
 Each control runs its calibration configuration plus floor and map.
 
+With MS_SAMPLE=sb2 the script measures the completeness on the 755 Gaia DR3
+SB2s that the calibration run placed in ms instead: their calibration
+configuration is gauss, the dust configuration map, and summary gives the
+fraction above 59, 76 and 102 overall and in bins of the RV mass ratio.
+
     python scripts/ms_threshold_dust.py inputs   # SEDs and training moments (local data)
     python scripts/ms_threshold_dust.py dust     # Edenhofer moments still missing (needs the map)
     python scripts/ms_threshold_dust.py fit      # WORKERS processes -> fits.jsonl, resumes
-    python scripts/ms_threshold_dust.py reseed   # single-star refits of the exceedances
+    python scripts/ms_threshold_dust.py reseed   # single-star refits above RESEED_ABOVE, resumes
     python scripts/ms_threshold_dust.py summary  # -> summary.json
 
 Paths come from MS_DATA (data/whitedwarf), MS_TRAIN_DUST (training moments),
 MS_HOLDOUT_DUST (optional precomputed holdout moments), MS_CONTROLS (the
-validation_ms_*.jsonl calibration fits) and MS_WORK.
+validation_ms_*.jsonl calibration fits), MS_SAMPLE (controls or sb2) and
+MS_WORK. RESEED_ABOVE (default 59) sets the statistic above which reseed
+refits; the pair refit can only raise the statistic, so the SB2 sample is
+reseeded from a lower value to catch stars that cross a threshold from below.
 """
 
 from concurrent.futures import ProcessPoolExecutor
@@ -48,14 +56,24 @@ CONTROLS = Path(os.environ.get("MS_CONTROLS", DATA))
 WORK = Path(os.environ.get("MS_WORK", ROOT / "reports/ms_threshold_dust/work"))
 WORKERS = int(os.environ.get("WORKERS", 4))
 LIMIT = int(os.environ.get("LIMIT", 0))
-SAMPLES = dict(training="fgk", independent="fgk_holdout")
-CALIBRATION = dict(training="floor01", independent="gauss")
+SAMPLE = os.environ.get("MS_SAMPLE", "controls")
+if SAMPLE == "sb2":
+    SAMPLES = dict(sb2="sb2")
+    CALIBRATION = dict(sb2="gauss")
+    DUST_CONFIGS = ("map",)
+else:
+    SAMPLES = dict(training="fgk", independent="fgk_holdout")
+    CALIBRATION = dict(training="floor01", independent="gauss")
+    DUST_CONFIGS = ("floor", "map")
 FLOOR = dict(floor01=.01, floor=.005, map=0.)
-DUST_CONFIGS = ("floor", "map")
 HYPOTHESES = ("dwarf", "ms+ms")
 THRESHOLD = 59.0
+THRESHOLDS = (59.0, 76.0, 102.0)
+RESEED_ABOVE = float(os.environ.get("RESEED_ABOVE", THRESHOLD))
+Q_BINS = (("<0.8", 0., .8), ("0.8-0.9", .8, .9), ("0.9-0.95", .9, .95), (">0.95", .95, np.inf))
 FALSE_POSITIVE = .02
 DWARF_LOGG = 4.1
+MAP_EDGE_PC = 70.
 
 
 class CachedDust:
@@ -89,13 +107,14 @@ def build_sed(sid, gaia, flux, error, tmass):
 
 def inputs():
     """The 154 / 197 controls (region ms, spectroscopic log g > 4.1 in the
-    calibration run): SEDs, calibration fits and the training moments."""
+    calibration run) or the 755 SB2s (region ms): SEDs, calibration fits and
+    the training moments."""
     from astropy.table import Table
     WORK.mkdir(parents=True, exist_ok=True)
     seds, controls = [], []
     for sample, kind in SAMPLES.items():
         rows = [json.loads(line) for line in (CONTROLS / f"validation_ms_{kind}.jsonl").read_text().splitlines()]
-        rows = [r for r in rows if r["location"]["region"] == "ms" and r["logg_spec"] > DWARF_LOGG]
+        rows = [r for r in rows if r["location"]["region"] == "ms" and r.get("logg_spec", np.inf) > DWARF_LOGG]
         directory = DATA / f"xp_{kind}"
         gaia = {int(r["source_id"]): {k: np.nan if np.ma.is_masked(r[k]) else float(r[k]) for k in r.colnames}
                 for r in Table.read(directory / "gaia.ecsv")}
@@ -107,9 +126,12 @@ def inputs():
         for r in rows:
             sid = int(r["source_id"])
             seds.append(build_sed(sid, gaia[sid], flux[index[sid]], error[index[sid]], tmass[tmass_ids == sid]))
-            controls.append(dict(source_id=str(sid), sample=sample, logg_spec=r["logg_spec"], feh_spec=r["feh_spec"],
+            labels = {k: r[k] for k in ("logg_spec", "feh_spec", "q_rv", "period") if k in r}
+            controls.append(dict(source_id=str(sid), sample=sample, **labels,
                                  calibration={h: r["free"][h] for h in HYPOTHESES}))
-        print(sample, len(rows), "controls", flush=True)
+        n_fit = [int(s.mask.sum()) - r["n_fit"] for s, r in zip(seds[-len(rows):], rows) if "n_fit" in r]
+        print(sample, len(rows), "stars;", sum(n != 0 for n in n_fit), "with another channel count than the calibration run",
+              flush=True)
     np.savez_compressed(WORK / "seds.npz", flux=np.stack([s.flux for s in seds]),
                         error=np.stack([s.error for s in seds]), mask=np.stack([s.mask for s in seds]),
                         parallax=np.array([s.parallax_mas for s in seds]),
@@ -117,7 +139,7 @@ def inputs():
                         source_id=np.array([s.source_id for s in seds]),
                         metadata=np.array([json.dumps(s.metadata) for s in seds]))
     (WORK / "controls.json").write_text(json.dumps(controls, indent=1) + "\n")
-    train = json.loads(TRAIN_DUST.read_text())
+    train = json.loads(TRAIN_DUST.read_text()) if "training" in SAMPLES else {}
     dust = {c["source_id"]: train[c["source_id"]] for c in controls if c["source_id"] in train}
     (WORK / "dust.json").write_text(json.dumps(dust) + "\n")
     print(len(dust), "of", len(controls), "with moments", flush=True)
@@ -133,7 +155,9 @@ def load_seds():
 
 def dust():
     """Edenhofer mean and width along each line of sight that lacks them, on
-    distances 1000 / (parallax + z sigma), z in [-3.2, 3.2], inside the map."""
+    distances 1000 / (parallax + z sigma), z in [-3.2, 3.2], inside the map;
+    distances inside its inner edge take the moments at MAP_EDGE_PC, as the
+    holdout moments do."""
     moments = json.loads((WORK / "dust.json").read_text())
     if HOLDOUT_DUST:
         moments.update({k: v for k, v in json.loads(Path(HOLDOUT_DUST).read_text()).items() if k not in moments})
@@ -144,7 +168,7 @@ def dust():
         sed = seds[sid]
         parallax = sed.parallax_mas + np.linspace(-3.2, 3.2, 33) * sed.parallax_error_mas
         record = dict(d=[], mean=[], sigma=[])
-        for d in np.sort(1000 / parallax[parallax > 0]):
+        for d in np.unique(np.maximum(MAP_EDGE_PC, 1000 / parallax[parallax > 0])):
             try:
                 mean, sigma = prior.moments(sed.metadata["ra"], sed.metadata["dec"], d)
             except ValueError:
@@ -296,16 +320,23 @@ def reseed_one(task):
 
 
 def reseed():
+    """Refit every fit whose statistic exceeds RESEED_ABOVE; resumes from reseed.json."""
     fits = read_fits()
     moments = json.loads((WORK / "dust.json").read_text())
     seds = load_seds()
+    path = WORK / "reseed.json"
+    out = json.loads(path.read_text()) if path.exists() else []
+    done = {(o["source_id"], o["config"]) for o in out}
     tasks = [(r["config"], r, fits[(r["source_id"], CALIBRATION[r["sample"]])], seds[r["source_id"]],
               moments[r["source_id"]])
-             for r in fits.values() if "failed" not in r and statistic(r) > THRESHOLD]
-    print(len(tasks), "refits", flush=True)
+             for key, r in fits.items() if "failed" not in r and statistic(r) > RESEED_ABOVE and key not in done]
+    print(len(tasks), "refits above", RESEED_ABOVE, flush=True)
     with ProcessPoolExecutor(WORKERS) as pool:
-        out = list(pool.map(reseed_one, tasks, chunksize=1))
-    (WORK / "reseed.json").write_text(json.dumps(out, indent=1) + "\n")
+        for i, o in enumerate(pool.map(reseed_one, tasks, chunksize=1)):
+            out.append(o)
+            path.write_text(json.dumps(out, indent=1) + "\n")
+            if (i + 1) % 50 == 0:
+                print(f"reseed {i + 1}/{len(tasks)}", flush=True)
     for o in sorted(out, key=lambda o: (o["sample"], o["config"], -o["stat"])):
         print(f"{o['sample']:11s} {o['config']:7s} {o['source_id']} Teff {o['teff']:5.0f} stat {o['stat']:7.1f} -> "
               f"{o['stat_reseeded']:7.1f}  dwarf {o['single']:8.1f} -> {o['single_reseeded']:8.1f} ({o['seed']}; "
@@ -382,5 +413,90 @@ def summary():
     print(json.dumps(out, indent=1))
 
 
+def interval(k, n):
+    """Two-sided 95% Clopper-Pearson interval."""
+    return [float(beta.ppf(.025, k, n - k + 1)) if k > 0 else 0., float(beta.ppf(.975, k + 1, n - k)) if k < n else 1.]
+
+
+def share(above, subset):
+    k, n = int(np.sum(above & subset)), int(np.sum(subset))
+    return dict(k=k, n=n, fraction=k / n, interval=interval(k, n))
+
+
+def by_q(stat, q_rv):
+    """Share above each threshold, overall and in the bins of the RV mass ratio."""
+    return {f"{t:g}": {label: share(stat > t, (q_rv >= lo) & (q_rv < hi))
+                       for label, lo, hi in (("all", -np.inf, np.inf),) + Q_BINS}
+            for t in THRESHOLDS}
+
+
+def completeness():
+    """Fraction of the SB2s above each threshold, overall and in bins of the
+    RV mass ratio, with the fitted q minus the RV ratio of those above; the
+    _reseeded entries take stat_reseeded from reseed.json where it exists and
+    the fitted statistic elsewhere."""
+    controls = {c["source_id"]: c for c in json.loads((WORK / "controls.json").read_text())}
+    fits, seds = read_fits(), load_seds()
+    reseeded = {}
+    if (WORK / "reseed.json").exists():
+        reseeded = {(o["source_id"], o["config"]): o for o in json.loads((WORK / "reseed.json").read_text())}
+
+    def stat_reseeded(row):
+        o = reseeded.get((row["source_id"], row["config"]))
+        return statistic(row) if o is None else o["stat_reseeded"]
+
+    stored = {sid: c["calibration"]["dwarf"]["objective"] - c["calibration"]["ms+ms"]["objective"]
+              for sid, c in controls.items()}
+    out = dict(n=len(controls), reseed_above=RESEED_ABOVE, configs={})
+    for config in ("gauss",) + DUST_CONFIGS:
+        rows = [fits[(sid, config)] for sid in controls if (sid, config) in fits]
+        ok = [r for r in rows if "failed" not in r]
+        stat = np.array([statistic(r) for r in ok])
+        after = np.array([stat_reseeded(r) for r in ok])
+        done = np.array([(r["source_id"], config) in reseeded for r in ok])
+        q_rv = np.array([controls[r["source_id"]]["q_rv"] for r in ok])
+        q_fit = np.array([r["ms+ms"]["q"] for r in ok])
+        c = dict(n=len(ok), failed=len(rows) - len(ok), converged={h: int(sum(r[h]["converged"] for r in ok))
+                                                                   for h in HYPOTHESES},
+                 percentiles=percentiles(stat), percentiles_reseeded=percentiles(after),
+                 reseeded=dict(n=int(done.sum()), missing=int(np.sum(~done & (stat > RESEED_ABOVE))),
+                               reseeded_minus_fitted=percentiles((after - stat)[done], (0, 2, 16, 50, 84, 98, 100))),
+                 above=by_q(stat, q_rv), above_reseeded=by_q(after, q_rv),
+                 crossed={f"{t:g}": dict(down=int(np.sum((stat > t) & (after <= t))),
+                                         up=int(np.sum((stat <= t) & (after > t)))) for t in THRESHOLDS})
+        for t in THRESHOLDS:
+            above = stat > t
+            c["above"][f"{t:g}"]["q_fit_minus_rv"] = percentiles(q_fit[above] - q_rv[above], (5, 50, 95))
+        c["e_minus_map_mean"] = {h: percentiles([r[h]["extinction_e"] - r[h]["map"][0] for r in ok]) for h in HYPOTHESES}
+        if config == "gauss":
+            c["minus_calibration_run"] = percentiles([statistic(r) - stored[r["source_id"]] for r in ok],
+                                                     (0, 2, 50, 98, 100))
+        else:
+            gauss = {r["source_id"]: r for r in (fits.get((sid, "gauss")) for sid in controls)
+                     if r is not None and "failed" not in r}
+            pairs = [(r, gauss[r["source_id"]]) for r in ok if r["source_id"] in gauss]
+            c["minus_gauss"] = percentiles([statistic(r) - statistic(g) for r, g in pairs])
+            for h in HYPOTHESES:
+                c[f"{h}_objective_minus_gauss"] = percentiles([r[h]["objective"] - g[h]["objective"] for r, g in pairs])
+            for key, f in (("versus_gauss", statistic), ("versus_gauss_reseeded", stat_reseeded)):
+                c[key] = {f"{t:g}": dict(both=sum(f(r) > t and f(g) > t for r, g in pairs),
+                                         only_here=sum(f(r) > t >= f(g) for r, g in pairs),
+                                         only_gauss=sum(f(g) > t >= f(r) for r, g in pairs))
+                          for t in THRESHOLDS}
+            c["map_width"] = percentiles([r["dwarf"]["map"][1] for r in ok])
+            regions = [r.get("region_at_map_mean") for r in ok]
+            c["region_at_map_mean"] = {g: regions.count(g) for g in sorted(set(regions))}
+            in_ms = np.array([g == "ms" for g in regions])
+            c["above_in_ms_at_map_mean"] = {f"{t:g}": dict(k=int(np.sum((stat > t) & in_ms)), n=int(in_ms.sum()))
+                                            for t in THRESHOLDS}
+        beyond = np.array([1000 / seds[r["source_id"]].parallax_mas >= MAP_EDGE_PC for r in ok])
+        c["above_beyond_map_edge"] = {f"{t:g}": share(stat > t, beyond) for t in THRESHOLDS}
+        c["above_beyond_map_edge_reseeded"] = {f"{t:g}": share(after > t, beyond) for t in THRESHOLDS}
+        out["configs"][config] = c
+    (WORK / "summary.json").write_text(json.dumps(out, indent=1) + "\n")
+    print(json.dumps(out, indent=1))
+
+
 if __name__ == "__main__":
-    dict(inputs=inputs, dust=dust, fit=fit, reseed=reseed, summary=summary)[sys.argv[1]]()
+    dict(inputs=inputs, dust=dust, fit=fit, reseed=reseed,
+         summary=completeness if SAMPLE == "sb2" else summary)[sys.argv[1]]()
