@@ -324,3 +324,11 @@ def test_cool_companion_uv_takes_its_own_extinction(sdm, stellar):
         assert value == pytest.approx(sdm.passband(clear["coarse"] * expected, band)
                                       / sdm.passband(clear["coarse"], band), rel=1e-9)
 
+
+def test_luminous_pair_error_is_nan_when_a_step_leaves_the_branch():
+    a0 = photocentre_a0(0.47, 1.0, 0.8, 365.25, 10.0)
+    rows = {r["branch"]: r for r in solve_luminous_pair(a0, 10.0, 365.25, 1.0, 0.8, errors=dict(a0=3.0))}
+    row = rows["B<beta"]
+    assert row["m1"] == pytest.approx(0.47, rel=1e-6)
+    assert np.isnan(row["sigma_terms"]["a0"])
+    assert np.isnan(row["sigma_m1"])
