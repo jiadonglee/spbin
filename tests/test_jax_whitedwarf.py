@@ -278,3 +278,22 @@ def test_free_radius_and_input_checks(wd):
         jax_fit(sed, model=wd, blue=([1], [1]))
     with pytest.raises(ValueError):
         jax_fit(sed, model=wd, hypotheses=("dwarf", "giant"))
+
+
+def test_log_age_companion_prior_matches_numpy(wd, stellar):
+    sed = composite_sed(wd, stellar, companion=.8)
+    options = dict(model=wd, hypotheses=("dwarf",), companion_age_gyr=None,
+                   companion_prior=dict(log_age=(9.5, .2)))
+    reference = numpy_fit(sed, **options)["hypotheses"]["dwarf"]["objective"]
+    result = jax_fit(sed, **options)["hypotheses"]["dwarf"]["objective"]
+    assert result <= reference + .01
+
+
+def test_cooling_supported_node_next_to_missing_mass(wd):
+    arrays = jw._wd_arrays(wd)
+    temperature = float(wd.cooling["teff_ax"][-1])
+    index = np.flatnonzero(np.isfinite(wd.cooling["radius"][-1]))[0]
+    mass = float(wd.cooling["mass_ax"][index])
+    radius, logg, age, valid = jw.physical(arrays, temperature, mass)
+    assert bool(valid)
+    assert float(radius) == pytest.approx(wd.physical(temperature, mass)["radius"], rel=1e-10)

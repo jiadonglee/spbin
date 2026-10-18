@@ -44,7 +44,7 @@ N_DATA = 176
 SLOTS = ("t", "m", "g", "r", "primary", "age", "feh", "q", "e", "z")
 STEPS = dict(t=.08, m=.05, g=.1, r=.05, primary=.05, age=.2, feh=.1, q=.1, e=.02, z=.2)
 WD_LABELS = ("teff", "mass", "logg", "radius")
-DWARF_LABELS = ("teff", "mass", "logg", "radius", "age_gyr", "feh")
+DWARF_LABELS = ("teff", "mass", "logg", "radius", "age_gyr", "feh", "log_age")
 UV_TEFF_K = (6812., 41430.)  # empirical GALEX calibration range of the DA model
 MAXFEV, XATOL, FATOL = 4000, 1e-5, 1e-4
 
@@ -198,7 +198,7 @@ class Problem(eqx.Module):
     dust_fail: jax.Array
     dust_flag: jax.Array
     wd_prior: jax.Array  # (3, 4) mean, sigma, flag for teff, mass, logg, radius
-    companion_prior: jax.Array  # (3, 6) the same for teff, mass, logg, radius, age_gyr, feh
+    companion_prior: jax.Array  # (3, 7) the same for teff, mass, logg, radius, age_gyr, feh, log_age
 
 
 class Spec(NamedTuple):
@@ -244,7 +244,7 @@ def dwarf(problem, mass, age, feh, scale, e, q=0.0):
                        jnp.where(wd.coarse_nm > 992, bb * full[60] / anchor[1], coarse))
     coarse = coarse * jnp.exp(-e * wd.coarse_curve)
     extra = jnp.concatenate([jnp.interp(wd.blue_nm, wd.coarse_nm, coarse), wd.passbands[3:] @ coarse])
-    labels = jnp.stack([teff, mass, pred.logg[0], pred.radius[0], age, feh])
+    labels = jnp.stack([teff, mass, pred.logg[0], pred.radius[0], age, feh, jnp.log10(age) + 9])
     component = Component(
         flux=jnp.concatenate([full * attenuation, extra]),
         variance=jnp.concatenate([variance, (.5 * extra)**2]),
