@@ -36,6 +36,11 @@ SIMPLEST_FIRST = ("dwarf", "pms", "single", "fgk", "wd", "sdb", "ms+ms", "pms+pm
 # wd+dwarf threshold: any one set this way is exceeded by 3.6% of the
 # independent dwarfs (docs/validation-whitedwarf.md).
 MS_THRESHOLD = {"ms+ms": 59.0, "wd+dwarf": None}
+# The same rule with extinction under the Edenhofer dust_prior at the map's own
+# width: exceeded by 2% of the 154 training dwarfs and 2 of the 197 independent
+# ones. Pinned to the map, a single star cannot redden to absorb a red excess,
+# and 10 of the 351 exceed 59 (scripts/ms_threshold_dust.py).
+MS_THRESHOLD_DUST = {"ms+ms": 102.0, "wd+dwarf": None}
 # objective(pms) - objective(pms+pms) in the pms region, exceeded by 1.3% of 911
 # single members of 68 open clusters at 10-200 Myr (2.0% of the 613 at 10-100 Myr,
 # none of the 104 that locate places in the region) fitted on XP and 2MASS at
@@ -257,7 +262,8 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     detection_statistic holds objective(dwarf) - objective(composite) for
     ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit runs in its
     calibrated configuration (feh=None, fit_parallax=True and a fitted
-    extinction), otherwise None. In the pms region it holds
+    extinction), MS_THRESHOLD_DUST when that extinction is fitted under
+    dust_prior, otherwise None. In the pms region it holds
     objective(pms) - objective(pms+pms), and threshold holds PMS_THRESHOLD
     with [M/H] at 0, a free age (with or without age_prior), fit_parallax=True
     and a fitted extinction.
@@ -319,7 +325,7 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     if region == "ms" and set(REGIONS["ms"]) <= set(objectives):
         out["detection_statistic"] = {k: objectives["dwarf"] - objectives[k] for k in ("ms+ms", "wd+dwarf")}
         if feh is None and fit_parallax and extinction is None:
-            out["threshold"] = dict(MS_THRESHOLD)
+            out["threshold"] = dict(MS_THRESHOLD_DUST if dust_prior is not None else MS_THRESHOLD)
     if region == "pms" and set(REGIONS["pms"]) <= set(objectives):
         out["detection_statistic"] = {"pms+pms": objectives["pms"] - objectives["pms+pms"]}
         if feh in (None, 0.0) and age_gyr is None and fit_parallax and extinction is None:
