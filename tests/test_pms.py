@@ -97,3 +97,22 @@ def test_pms_region_routes_and_calibrated_threshold():
     pair = fit_star(_mock(.5, .8), age_prior=(np.log10(2e7), .3))
     assert pair["preferred"] == "pms+pms"
     assert abs(pair["result"]["hypotheses"]["pms+pms"]["companion"]["q"] - .8) < .05
+
+
+@pytest.mark.parametrize("age", [None, .05])
+def test_base_fit_refuses_the_pms_model(pms, age):
+    from spbin.fit import fit
+    sed = _mock(.6, 0)
+    with pytest.raises(ValueError, match="fit_star"):
+        fit(sed, "single", model=pms, age_gyr=age)
+    pytest.importorskip("jax")
+    from spbin._jax.fit import fit as jax_fit
+    with pytest.raises(ValueError, match="fit_star"):
+        jax_fit(sed, "single", model=pms, age_gyr=age)
+
+
+def test_jax_whitedwarf_frame_refuses_the_pms_model(pms):
+    pytest.importorskip("jax")
+    from spbin._jax.whitedwarf import fit_whitedwarf_companion as jax_fit
+    with pytest.raises(ValueError, match="pms"):
+        jax_fit(_mock(.6, 0), hypotheses=("dwarf",), stellar=pms, companion_age_gyr=.05)

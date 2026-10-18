@@ -545,6 +545,8 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
     unknown = set(kinds) - {"dwarf", "ms+ms", "wd", "wd+dwarf"}
     if unknown or not kinds:
         raise ValueError(f"unknown hypotheses: {sorted(unknown)}")
+    if stellar is not None and stellar.pms:
+        raise ValueError("the compiled frame has no pms youth correction: fit StellarModel(pms=True) with numpy")
     default_wd, default_stellar = _default_models()
     p = _prepare(sed, default_wd if model is None else model, default_stellar if stellar is None else stellar,
                  extinction, extinction_prior, dust_prior, parallax, fit_parallax, blue, galex, use_spherex,

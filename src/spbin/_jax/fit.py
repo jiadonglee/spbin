@@ -311,6 +311,9 @@ def fit(sed, kind="both", *, model=None, age_gyr=5.0, feh=0.0, q=None,
     if age_prior is not None and age_gyr is not None:
         raise ValueError("age_prior requires a free age (age_gyr=None)")
     model = StellarModel() if model is None else model
+    if model.pms:
+        raise ValueError("fit has no pre-main-sequence starts: fit StellarModel(pms=True) with "
+                         "fit_star(region='pms') or fit_whitedwarf_companion")
     model.labels([0.7], 5.0 if age_gyr is None else age_gyr, 0.0 if feh is None else feh)
     mask = sed.fit_mask(use_wise) & model.support
     if mask.sum() < 4:
