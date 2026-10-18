@@ -263,33 +263,23 @@ def blue_xp(sed, cache_dir="data"):
 def galex(sed, cache_dir="data", radius_arcsec=3.0):
     """GALEX GR6/7 AIS FUV and NUV for the source: {band: (AB mag, error, usable)}.
 
-    Queries VizieR II/335/galex_ais around the Gaia position and takes the nearest match within
-    radius_arcsec. A band is usable when it is measured, fainter than the 10 per cent local roll-off and
-    its artifact flag is at most 1 (detector edge). The result is cached as galex.json.
+    Crossmatches VizieR II/335/galex_ais through spbin.uv.crossmatch_uv: the Gaia position is moved by its
+    proper motion to the GALEX epoch, and a match to more than one GALEX source leaves both bands unusable.
+    The nearest match gives each band. A band is usable when it is measured, fainter than the 10 per cent
+    local roll-off and its artifact flag is present and at most 1 (detector edge). The crossmatch is cached
+    in cache_dir/<source_id>/galex.
     """
-    directory = Path(cache_dir).expanduser() / str(sed.source_id)
-    path = directory / "galex.json"
-    if path.exists():
-        return {k: tuple(v) for k, v in json.loads(path.read_text()).items()}
-    import astropy.units as u
-    from astropy.coordinates import SkyCoord
-    from astroquery.vizier import Vizier
+    from .uv import crossmatch_uv, source_row
 
-    coord = SkyCoord(float(sed.metadata["ra"]) * u.deg, float(sed.metadata["dec"]) * u.deg)
-    tables = Vizier(columns=["_r", "FUVmag", "e_FUVmag", "NUVmag", "e_NUVmag", "Fafl", "Nafl"], row_limit=20
-                    ).query_region(coord, radius=radius_arcsec * u.arcsec, catalog="II/335/galex_ais")
+    directory = Path(cache_dir).expanduser() / str(sed.source_id) / "galex"
+    record = crossmatch_uv(source_row(sed), cache_dir=directory, catalogues=("galex",),
+                           radius_arcsec=radius_arcsec)[str(sed.source_id)]["galex"]
     out = {"FUV": (np.nan, np.nan, False), "NUV": (np.nan, np.nan, False)}
-    if tables and len(tables[0]):
-        row = tables[0][int(np.argmin(np.asarray(tables[0]["_r"], float)))]
-        for band, flag in (("FUV", "Fafl"), ("NUV", "Nafl")):
-            mag, err = row[f"{band}mag"], row[f"e_{band}mag"]
-            if np.ma.is_masked(mag) or np.ma.is_masked(err):
-                continue
-            mag, err = float(mag), float(err)
-            artifact = int(0 if np.ma.is_masked(row[flag]) else row[flag])
-            out[band] = (mag, err, bool(mag > GALEX_BRIGHT[band] and artifact <= 1 and err > 0))
-    directory.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out))
+    if record["matches"]:
+        for band, value in record["matches"][0]["bands"].items():
+            mag, err = value["mag_ab"], value["mag_error"]
+            if mag is not None and err is not None and np.isfinite([mag, err]).all():
+                out[band] = (float(mag), float(err), value["usable"])
     return out
 
 
@@ -796,7 +786,6 @@ def fit_subdwarf_companion(sed, *, companions=("dwarf", "subgiant"), tiers=TIERS
     which the template does not predict), plus blue=(flux, error) from blue_xp() and galex= from galex().
     GALEX needs the pure-hydrogen tier, the only one with NUV. A companion's GALEX flux, and its blue XP
     flux unless it is a giant, is a blackbody joined to its XP spectrum (COMPANION_UV_ERROR).
-    It has no WISE fluxes and takes use_wise=False.
     screening=True is for classifying many stars by the objectives, beta_G and preferred hypothesis alone:
     the Teff_sd profile has one pass of nodes at SCREEN_COARSE_K, looser node tolerances (SCREEN_NODE) and
     no refinement around the minimum, and the subdwarf hypotheses carry no `ranges`; the final polish is
@@ -807,6 +796,7 @@ def fit_subdwarf_companion(sed, *, companions=("dwarf", "subgiant"), tiers=TIERS
     age and its radius from the isochrone, at the shared parallax and extinction. Its blue XP channels and
     GALEX fluxes come from the hot UV table (HotUV: CK04 and TLUSTY through the XP operator, relative to its
     392 nm channel; MS_BLUE_ERROR, MS_GALEX_ERROR). The single giant is re-polished from it as from sdb+giant.
+    It has no WISE fluxes and takes use_wise=False.
 
     fg_ms=True (with "giant" in companions) adds "fg+giant": the template giant plus an F/G/K main-sequence star
     through StellarModel at the giant's [M/H] (clipped to -1-0.5), with free mass and age. The template giant
@@ -861,8 +851,6 @@ def _prepare(sed, companions, tiers, model, stellar, template, giant_template, p
     sdm = SubdwarfModel() if model is None else model
     stellar = StellarModel() if stellar is None else stellar
     companions = tuple(companions)
-    if hot_ms and use_wise:
-        raise ValueError("hot_ms has no WISE fluxes: every hypothesis must share the channels, so use_wise=False")
     if any(c not in COMPANIONS for c in companions):
         raise ValueError(f"companions must be drawn from {COMPANIONS}")
     tiers = tuple(tiers)
@@ -872,6 +860,8 @@ def _prepare(sed, companions, tiers, model, stellar, template, giant_template, p
         template = GiantTemplate()
     if hot_ms and "giant" not in companions:
         raise ValueError("hot_ms compares a hot main-sequence star with the sdB beside a giant: add 'giant'")
+    if hot_ms and use_wise:
+        raise ValueError("hot_ms has no WISE fluxes: every hypothesis must share the channels, so use_wise=False")
     if fg_ms and "giant" not in companions:
         raise ValueError("fg_ms compares an F/G/K main-sequence star with the sdB beside a giant: add 'giant'")
     if "giant" in companions and giant_template is None:

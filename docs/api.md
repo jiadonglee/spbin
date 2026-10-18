@@ -319,7 +319,9 @@ cached continuous spectrum and returns `(flux, error)` for `blue=`; it is
 validated for single subdwarfs and biases composites
 ([validation](validation-subdwarf.md)).
 `galex(sed, cache_dir="data")` returns GALEX GR6/7 AIS FUV and NUV with a
-usable flag (below the count-rate roll-off, no artifact) for `galex=`;
+usable flag (below the count-rate roll-off, artifact flag present and at most
+1, a single GALEX source) for `galex=`; it matches through `crossmatch_uv`,
+with the Gaia position moved to the GALEX epoch;
 GALEX needs `tiers=("H",)` and pulls Teff low against spectroscopy, so it
 is for diagnostics. `SubdwarfModel(correction="ab",
 calibration="bundled")` evaluates the table:

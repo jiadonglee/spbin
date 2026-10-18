@@ -69,3 +69,37 @@ def test_download_adds_uv_to_cached_sed(monkeypatch, tmp_path):
     result = download("1", cache_dir=tmp_path, uv=True)
     assert result.metadata["uv"] == SED.load(path).metadata["uv"]
     np.testing.assert_array_equal(result.flux, sed.flux)
+
+
+def _galex_rows(ra, dec, objids, fafl):
+    n = len(objids)
+    return Table({"_q": [1] * n, "_r": [0.1] * n, "RAJ2000": [ra] * n, "DEJ2000": [dec] * n,
+                  "objid": objids, "FUVmag": [17.] * n, "e_FUVmag": [.05] * n,
+                  "NUVmag": [16.5] * n, "e_NUVmag": [.03] * n,
+                  "Fafl": fafl, "Nafl": [0] * n})
+
+
+@pytest.mark.parametrize("objids, fafl, usable", [
+    ([7], [0], True),
+    ([7, 8], [0, 0], False),
+    ([7], [np.ma.masked], False),
+])
+def test_galex_moves_the_source_and_refuses_ambiguous_or_unflagged(monkeypatch, tmp_path, objids, fafl, usable):
+    from spbin import SED
+    from spbin.subdwarf import galex
+    VizierClass = pytest.importorskip("astroquery.vizier").VizierClass
+    centres = []
+
+    def query(self, coordinates, **kwargs):
+        centres.append(coordinates)
+        rows = _galex_rows(float(np.atleast_1d(coordinates.ra.deg)[0]),
+                           float(np.atleast_1d(coordinates.dec.deg)[0]), objids, fafl)
+        rows["Fafl"] = np.ma.masked_array(rows["Fafl"], mask=[f is np.ma.masked for f in fafl])
+        return [rows]
+    monkeypatch.setattr(VizierClass, "query_region", query)
+    sed = SED(np.ones(168), np.ones(168), np.ones(168, bool), 10., source_id="1",
+              metadata=dict(ra=120., dec=0., pmra=400., pmdec=0., ref_epoch=2016.))
+    result = galex(sed, cache_dir=tmp_path)
+    shift = (120. - float(np.atleast_1d(centres[0].ra.deg)[0])) * 3600
+    assert shift == pytest.approx(400e-3 * 9, abs=.01)
+    assert result["FUV"][2] is usable
