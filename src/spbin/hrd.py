@@ -243,7 +243,8 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
               WD-route frame, XP and 2MASS only
       hot_ms  single and coeval binary with StellarModel(hot=True)
       giant   fit_giant_companion; needs labels=dict(teff=, logg=, feh=) as
-              (mean, sigma) on the APOGEE scale
+              (mean, sigma) on the APOGEE scale, and with fit_parallax=True
+              a luminosity mode in options (luminosity="parsec" or "massfree")
       sdb     fit_subdwarf_companion
       wd      fit_whitedwarf_companion
     region= overrides the location. extinction is a fixed ZGR23 E, or None
@@ -314,6 +315,11 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
         if labels is None or set(labels) != {"teff", "logg", "feh"}:
             out["location"] = dict(location, reason=location["reason"]
                                    + "; the giant route needs labels=dict(teff=, logg=, feh=)")
+            return out
+        if fit_parallax and options.get("luminosity") is None:
+            out["location"] = dict(location, reason=location["reason"]
+                                   + "; the giant route fits the parallax only with options=dict("
+                                   "luminosity='parsec' or 'massfree')")
             return out
         if extinction is not None:
             extinction_prior = (extinction, 0.01)

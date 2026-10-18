@@ -140,3 +140,19 @@ def test_pms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, 
     _stub_route(monkeypatch)
     result = fit_star(_mock_binary(.9, .7), region="pms", options=options, **kwargs)
     assert result["threshold"] == (None if expected is None else dict(expected))
+
+
+def test_giant_region_keeps_a_parallax_fit_request(monkeypatch):
+    calls = []
+
+    def route(sed, teff, logg, feh, **kwargs):
+        calls.append(kwargs)
+        return dict(rows=[dict(m2=0, objective=10.0), dict(m2=1.0, objective=0.0)])
+    monkeypatch.setattr("spbin.hrd.fit_giant_companion", route)
+    labels = dict(teff=(4500., 50.), logg=(2.5, .1), feh=(0., .05))
+    sed = _mock_binary(.9, .7)
+    refused = fit_star(sed, region="giant", labels=labels, fit_parallax=True)
+    assert refused["result"] is None and "luminosity" in refused["location"]["reason"]
+    assert calls == []
+    fitted = fit_star(sed, region="giant", labels=labels, fit_parallax=True, options=dict(luminosity="parsec"))
+    assert calls[-1]["luminosity"] == "parsec" and fitted["preferred"] == "giant+companion"
