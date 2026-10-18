@@ -41,9 +41,10 @@ def make_stars(model, n, seed=0):
                               rng.uniform(1.0, 9.0), rng.uniform(-0.7, 0.3))
         if pair is None:
             continue
-        flux = pair["flux_10pc"] * (100.0 / rng.uniform(30.0, 200.0))**2
+        distance_pc = rng.uniform(30.0, 200.0)
+        flux = pair["flux_10pc"] * (10.0 / distance_pc)**2
         sed = SED(flux * (1 + rng.normal(0, 0.03, 168)), flux * 0.03,
-                  np.ones(168, bool), float(rng.uniform(3.0, 30.0)),
+                  np.ones(168, bool), float(1000.0 / distance_pc),
                   float(rng.uniform(0.03, 0.10)))
         sed.metadata.update(ra=30.0, dec=10.0, phot_g_mean_mag=14.0)
         stars.append(sed)
