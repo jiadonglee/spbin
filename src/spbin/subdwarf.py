@@ -611,7 +611,7 @@ class _Hypothesis:
                 return None
             comps.append(sd)
         elif self.name == "fg_giant":
-            # a coeval companion shares the giant's [M/H], within the network's range
+            # the companion shares the giant's [M/H], within the network's range; its age is free
             age = np.exp(v["lnage"])
             low_age, high_age = p.stellar.age_range_gyr
             if not low_age <= age <= high_age:
@@ -809,7 +809,8 @@ def fit_subdwarf_companion(sed, *, companions=("dwarf", "subgiant"), tiers=TIERS
     392 nm channel; MS_BLUE_ERROR, MS_GALEX_ERROR). The single giant is re-polished from it as from sdb+giant.
 
     fg_ms=True (with "giant" in companions) adds "fg+giant": the template giant plus an F/G/K main-sequence star
-    through StellarModel, coeval with the giant and at its [M/H] (clipped to -1-0.5), with free mass and age. Its
+    through StellarModel at the giant's [M/H] (clipped to -1-0.5), with free mass and age. The template giant
+    carries no age, so the star's age is not tied to the giant's evolutionary state. Its
     blue XP channels come from the empirical colour table of APOGEE dwarfs (CoolUV, 4400-7500 K; table scatter and
     FG_BLUE_FLOOR), its GALEX fluxes from a blackbody joined to XP (COMPANION_UV_ERROR). This is the cool
     alternative to the sdB below the hot main-sequence star (>= 6800 K), whose range it meets.
@@ -1021,7 +1022,7 @@ def _fit_ms_giant(p, e0):
 
 
 def _fit_fg_giant(p, e0):
-    """F/G/K main-sequence star + template giant, the star coeval with the giant and at its [M/H]. Each
+    """F/G/K main-sequence star + template giant, the star at the giant's [M/H] with a free age. Each
     FG_MASSES x FG_AGES lattice star at a giant's [M/H] is paired with the giants of that [M/H] (GIANT_LATTICE and
     the single giant's), each scaled by linear least squares to the data minus the star; the three best giants per
     star get the full objective, and the N_POLISH best points are polished in all parameters."""
