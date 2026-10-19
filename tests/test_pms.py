@@ -111,7 +111,7 @@ def test_base_fit_refuses_the_pms_model(pms, age):
         jax_fit(sed, "single", model=pms, age_gyr=age)
 
 
-def test_jax_whitedwarf_frame_refuses_the_pms_model(pms):
+def test_jax_whitedwarf_frame_refuses_the_pms_model_for_dwarfs(pms):
     pytest.importorskip("jax")
     from spbin._jax.whitedwarf import fit_whitedwarf_companion as jax_fit
     with pytest.raises(ValueError, match="pms"):

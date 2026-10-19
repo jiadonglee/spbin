@@ -23,9 +23,11 @@ DUST_GRID_POINTS = 161
 
 
 class ModelArrays(eqx.Module):
-    """Static model data as a pytree; `hot` selects the hot-route behaviour."""
+    """Static model data as a pytree; `hot` and `pms` select those routes' behaviour."""
 
     hot: bool = eqx.field(static=True)
+    pms: bool = eqx.field(static=True)
+    age_range_gyr: tuple = eqx.field(static=True)  # the model's age bounds
 
     track_mass: jax.Array  # (n_metal, n_age, n_pad)
     track_values: jax.Array  # (n_metal, n_age, n_pad, 4): logTe, logL, Ks, G
@@ -61,6 +63,15 @@ class ModelArrays(eqx.Module):
     hot_delta_c: jax.Array  # (64,)
     hot_cool_edge_k: jax.Array  # (2,)
 
+    pms_knots: jax.Array  # (k,) Teff knots of the pms correction
+    pms_a: jax.Array  # (k, 64)
+    pms_b: jax.Array  # (k, 64)
+    pms_log_age_range: jax.Array  # (2,) calibrated log10(age/yr) range of the youth term
+    pms_log_age_pivot: jax.Array  # scalar
+    pms_taper_log_age: jax.Array  # (2,)
+    pms_amplitude_scatter: jax.Array  # (k,)
+    pms_extra_diag: jax.Array  # (k, 64)
+
     error_basis: jax.Array  # (168, n_err) cold, warm and hot term columns
     error_diag: jax.Array  # (168, 3) per-term diagonal standard deviations
     error_columns: tuple = eqx.field(static=True)  # per-term column counts
@@ -70,7 +81,7 @@ class ModelArrays(eqx.Module):
 
     @classmethod
     def build(cls, model):
-        """Convert a numpy `StellarModel` (hot or not) into packed arrays."""
+        """Convert a numpy `StellarModel` (any route) into packed arrays."""
         n_metal, n_age = len(model.metals), len(next(iter(model.tracks.values())))
         n_pad = max(len(track) for metal in model.tracks.values() for track in metal.values())
         mass = np.zeros((n_metal, n_age, n_pad))
@@ -117,8 +128,9 @@ class ModelArrays(eqx.Module):
                          model.hot_summary["support"][key][1]]
                         for key in ("teff", "logg", "feh")]) if model.hot else np.zeros((3, 2))
         table = model.hot_table if model.hot else _load(DATA / "hot" / "hot_table.npz")
+        pms = model.pms_table if model.pms else _load(DATA / "pms" / "pms_correction.npz")
         return cls(
-            hot=model.hot,
+            hot=model.hot, pms=model.pms, age_range_gyr=tuple(float(a) for a in model.age_range_gyr),
             track_mass=jnp.asarray(mass), track_values=jnp.asarray(values),
             track_lo=jnp.asarray(lo), track_hi=jnp.asarray(hi),
             log_ages=jnp.asarray(ages), metals=jnp.asarray(model.metals),
@@ -140,6 +152,12 @@ class ModelArrays(eqx.Module):
             hot_delta_a=jnp.asarray(table["delta_a"]), hot_delta_b=jnp.asarray(table["delta_b"]),
             hot_delta_c=jnp.asarray(table["delta_c"]),
             hot_cool_edge_k=jnp.asarray(table["cool_edge_k"]),
+            pms_knots=jnp.asarray(pms["teff_knots"]), pms_a=jnp.asarray(pms["a"]),
+            pms_b=jnp.asarray(pms["b"]), pms_log_age_range=jnp.asarray(pms["log_age_range"]),
+            pms_log_age_pivot=jnp.asarray(pms["log_age_pivot"]),
+            pms_taper_log_age=jnp.asarray(pms["taper_log_age"]),
+            pms_amplitude_scatter=jnp.asarray(pms["amplitude_scatter"]),
+            pms_extra_diag=jnp.asarray(pms["extra_diag"]),
             error_basis=jnp.asarray(np.concatenate(bases, axis=1)),
             error_diag=jnp.asarray(np.stack(diags, axis=1)),
             error_columns=tuple(widths),

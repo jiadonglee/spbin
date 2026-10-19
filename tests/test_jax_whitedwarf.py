@@ -11,7 +11,7 @@ import equinox as eqx
 from scipy.optimize import minimize
 
 from spbin import SED, StellarModel, WhiteDwarfModel
-from spbin.extinction import EdenhoferPrior
+from spbin.extinction import EdenhoferPrior, extinction_curve
 from spbin.whitedwarf import DATA, _Hypothesis, _prepare
 from spbin.whitedwarf import fit_whitedwarf_companion as numpy_fit
 from spbin._jax import whitedwarf as jw
@@ -57,6 +57,27 @@ def objective_pairs(p, kind, free_radius, age, feh, n, rng, fixed=None):
     thetas[:, free] = points
     compiled = np.asarray(jw._scores(jnp.asarray(thetas), problem, spec))
     return np.array([hyp.objective(x) for x in points]), compiled
+
+
+def assert_dwarf_matches(p, problem, slots, mass, age, feh, e, q):
+    """The compiled dwarf component against numpy's; numpy's labels, or None where it rejects the point."""
+    reference = p.dwarf(mass, age, feh, .01, e, q)
+    component, columns = jw.dwarf(problem, mass, age, feh, .01, e, q)
+    assert bool(component.valid) == (reference is not None)
+    if reference is None:
+        return None
+    np.testing.assert_allclose(np.asarray(component.flux)[slots], reference["flux"], rtol=1e-10)
+    np.testing.assert_allclose(np.asarray(component.variance)[slots], reference["variance"], rtol=1e-10)
+    np.testing.assert_allclose(np.asarray(component.coarse), reference["coarse"], rtol=1e-10)
+    # numpy keeps only nonzero-weight error terms; the covariance is invariant.
+    compiled = np.asarray(columns)[slots]
+    covariance = reference["columns"] @ reference["columns"].T
+    np.testing.assert_allclose(compiled @ compiled.T, covariance, rtol=1e-10,
+                               atol=1e-12 * np.abs(covariance).max())
+    labels = reference["labels"]
+    np.testing.assert_allclose(np.asarray(component.labels),
+                               [labels[k] for k in jw.DWARF_LABELS], rtol=1e-12)
+    return labels
 
 
 def assert_objectives_agree(reference, compiled):
@@ -124,23 +145,7 @@ def test_components_match_numpy(wd, hot):
     for _ in range(40):
         mass, q = rng.uniform(.15, 2.1), rng.choice([0., rng.uniform(.1, 1.)])
         age, feh, e = rng.uniform(.5, 10), rng.uniform(-1, .5), rng.uniform(0, .5)
-        reference = p.dwarf(mass, age, feh, .01, e, q)
-        component, columns = jw.dwarf(problem, mass, age, feh, .01, e, q)
-        assert bool(component.valid) == (reference is not None)
-        if reference is None:
-            continue
-        np.testing.assert_allclose(np.asarray(component.flux)[slots], reference["flux"], rtol=1e-10)
-        np.testing.assert_allclose(np.asarray(component.variance)[slots], reference["variance"], rtol=1e-10)
-        np.testing.assert_allclose(np.asarray(component.coarse), reference["coarse"], rtol=1e-10)
-        # numpy keeps only nonzero-weight error terms; the covariance is invariant.
-        compiled = np.asarray(columns)[slots]
-        covariance = reference["columns"] @ reference["columns"].T
-        np.testing.assert_allclose(compiled @ compiled.T, covariance, rtol=1e-10,
-                                   atol=1e-12 * np.abs(covariance).max())
-        labels = reference["labels"]
-        np.testing.assert_allclose(np.asarray(component.labels),
-                                   [labels[k] for k in jw.DWARF_LABELS], rtol=1e-12)
-        checked += 1
+        checked += assert_dwarf_matches(p, problem, slots, mass, age, feh, e, q) is not None
     assert checked > 15
     checked = 0
     for _ in range(40):
@@ -171,6 +176,43 @@ def test_objectives_match_numpy(wd, stellar):
     # Fixed WD temperature and mass, as the light-limit scan sets them.
     assert_objectives_agree(*objective_pairs(p, "wd+dwarf", False, None, None, 80, rng,
                                              fixed=dict(t=np.log(12000.), m=.8)))
+
+
+def test_pms_components_match_numpy(wd):
+    """The youth correction and its error column, across the taper and the clipped youth term."""
+    stellar = StellarModel(pms=True)
+    sed = composite_sed(wd, StellarModel())
+    blue = (np.full(6, 2.0), np.full(6, .1))
+    p = _prepare(sed, wd, stellar, .05, None, None, None, False, blue, None, False, None, None)
+    problem = jw.build_problem(p, .03)
+    slots = list(p.idx) + list(jw.BLUE_SLOTS)
+    assert len(p.idx) == 64  # XP61 and J/H/Ks
+    rng = np.random.default_rng(8)
+    checked = corrected = 0
+    for _ in range(60):
+        mass, q = rng.uniform(.15, 2.1), rng.choice([0., rng.uniform(.1, 1.)])
+        age = 10**rng.uniform(np.log10(stellar.age_range_gyr[0]), np.log10(stellar.age_range_gyr[1]))
+        feh, e = rng.uniform(-.3, .3), rng.uniform(0, .5)
+        labels = assert_dwarf_matches(p, problem, slots, mass, age, feh, e, q)
+        if labels is not None:
+            checked += 1
+            corrected += np.abs(stellar.pms_correction([labels["teff"]], age)).max() > .01
+    assert checked > 25 and corrected > 15
+
+
+def test_pms_objectives_match_numpy(wd):
+    """pms and pms+pms: free age under a log_age prior, free or fixed [M/H], fitted
+    extinction and parallax; a fixed age on the pms route."""
+    stellar = StellarModel(pms=True)
+    flux = stellar.evaluate(.6, .7, .03, 0.)["flux_10pc"]
+    sed = SED(flux * .01, flux * .0002, wd.support & stellar.support, 10, .1, "mock")
+    p = _prepare(sed, wd, stellar, None, (.02, .03), None, None, True, None, None, False,
+                 None, {"log_age": (7.5, .3), "teff": (4500., 800.)})
+    rng = np.random.default_rng(4)
+    for kind in ("pms", "pms+pms"):
+        assert_objectives_agree(*objective_pairs(p, kind, False, None, 0., 150, rng))
+    assert_objectives_agree(*objective_pairs(p, "pms+pms", False, None, None, 100, rng))
+    assert_objectives_agree(*objective_pairs(p, "pms+pms", False, .03, 0., 100, rng))
 
 
 def test_objectives_match_numpy_dust_and_free_radius(wd, stellar):
@@ -264,6 +306,48 @@ def test_main_sequence_pair(wd):
     pair = result["hypotheses"]["ms+ms"]["companion"]
     assert result["preferred"] == "ms+ms" and abs(pair["q"] - .7) < .02
     assert result["delta"]["dwarf"] > 100
+
+
+def test_pms_pair(wd):
+    stellar = StellarModel(pms=True)
+    flux = stellar.evaluate(.5, .8, .02, 0.)["flux_10pc"] * .01
+    sed = SED(flux, flux * .01, wd.support & stellar.support, 10, .02, "mock")
+    options = dict(model=wd, hypotheses=("pms", "pms+pms"), companion_age_gyr=None,
+                   companion_prior=dict(log_age=(np.log10(2e7), .3)))
+    result = jax_fit(sed, **options)
+    summaries_agree(numpy_fit(sed, **options), result)
+    pair = result["hypotheses"]["pms+pms"]["companion"]
+    assert result["preferred"] == "pms+pms" and abs(pair["q"] - .8) < .05
+    assert pair["log_age"] == pytest.approx(np.log10(pair["age_gyr"]) + 9)
+    for hypotheses, model in ((("pms", "dwarf"), None), (("pms",), StellarModel()),
+                              (("dwarf",), stellar)):
+        with pytest.raises(ValueError):
+            jax_fit(sed, model=wd, stellar=model, hypotheses=hypotheses)
+
+
+def test_pms_single_starts_at_every_age(wd):
+    """A young near-main-sequence single under a narrow extinction prior above its
+    reddening: the three best grid seeds are old, and the young fit is reached from
+    the best seed of a young age."""
+    stellar = StellarModel(pms=True)
+    flux = (stellar.evaluate(.9, 0., .025, 0.)["flux_10pc"] * .01
+            * np.exp(-.1 * extinction_curve(stellar.wavelength_um)))
+    sed = SED(flux, flux * .01, wd.support & stellar.support, 10, .1, "mock")
+    options = dict(model=wd, stellar=stellar, hypotheses=("pms",), companion_age_gyr=None,
+                   extinction=None, extinction_prior=(.15, .005), fit_parallax=True)
+    result = jax_fit(sed, **options)
+    summaries_agree(numpy_fit(sed, **options), result)
+    assert abs(result["hypotheses"]["pms"]["companion"]["log_age"] - 7.4) < .1
+    p = _prepare(sed, wd, stellar, None, (.15, .005), None, None, True, None, None, False, None, None)
+    hyp = _Hypothesis(p, "pms", False, None, 0.)
+    template = jw._template(hyp)
+    problem = eqx.tree_at(lambda pr: pr.template, jw.build_problem(p, None), jnp.asarray(template))
+    seeds = jw._seeds(hyp, None)
+    thetas = np.tile(template, (len(seeds), 1))
+    thetas[:, [jw.SLOTS.index(k) for k in hyp.names]] = [[v[k] for k in hyp.names] for v in seeds]
+    scores = np.asarray(jw._scores(jnp.asarray(thetas), problem, jw.spec_of(hyp)))
+    best = np.argsort(scores, kind="stable")[:3]
+    assert all(seeds[i]["age"] / np.log(10) + 9 > 7.9 for i in best)
 
 
 def test_free_radius_and_input_checks(wd):
