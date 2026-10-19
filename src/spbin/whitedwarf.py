@@ -366,9 +366,19 @@ class _Hypothesis:
         if self.p.galex_upper_limits and "e" in self.names:
             seeds.extend([{**v,"e":e} for v in list(seeds) for e in [.15,.3,.6]])
         ranked = sorted(((self.objective([v[k] for k in self.names]), v) for v in seeds), key=lambda item: item[0])
+        starts = ranked[:3]
+        if self.kind == "pms" and self.age is None:
+            # Near the main sequence the SED barely changes with age, so old seeds rank well,
+            # while the age grid misses the steep pre-main-sequence track. Under a narrow E
+            # prior the best seeds can then all lie in the old basin, so the single also starts
+            # from the best seed of every age; the pair starts from the single's solution.
+            first = {}
+            for item in ranked:
+                first.setdefault(item[1]["age"], item)
+            starts += [item for item in first.values() if all(item[1] is not s[1] for s in starts)]
         results = []
         steps = dict(t=.08, m=.05, g=.1, r=.05, primary=.05, age=.2, feh=.1, q=.1, e=.02, z=.2)
-        for score, v in ranked[:3]:
+        for score, v in starts:
             if score >= 1e29:
                 continue
             x0 = np.array([v[k] for k in self.names])

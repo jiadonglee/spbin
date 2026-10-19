@@ -41,11 +41,12 @@ MS_THRESHOLD = {"ms+ms": 59.0, "wd+dwarf": None}
 # ones. Pinned to the map, a single star cannot redden to absorb a red excess,
 # and 10 of the 351 exceed 59 (scripts/ms_threshold_dust.py).
 MS_THRESHOLD_DUST = {"ms+ms": 102.0, "wd+dwarf": None}
-# objective(pms) - objective(pms+pms) in the pms region, exceeded by 1.3% of 911
-# single members of 68 open clusters at 10-200 Myr (2.0% of the 613 at 10-100 Myr,
+# objective(pms) - objective(pms+pms) in the pms region, exceeded by 0.4% of 911
+# single members of 68 open clusters at 10-200 Myr (0.7% of the 613 at 10-100 Myr,
 # none of the 104 that locate places in the region) fitted on XP and 2MASS at
 # [M/H] = 0 with a free age, fitted parallax, fitted extinction and out-of-fold
-# pms corrections; by 1.1% with a 0.3 dex cluster-age prior. 12 of 154
+# pms corrections; by 0.5% with a 0.3 dex cluster-age prior and by 0.5% under the
+# Edenhofer dust_prior (none of the 105 placed in the region). 9 of 154
 # photometric binaries among the members exceed it, 3 of the 76 in the region.
 PMS_THRESHOLD = {"pms+pms": 25.0}
 # Options of the WD-route frame the calibrations above set themselves; any other
