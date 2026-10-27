@@ -128,7 +128,8 @@ See [model and limitations](docs/model.md) for the full description and
   GaiaXPy from the public continuous spectra.
 - 2MASS J/H/Ks and AllWISE W1/W2 from Gaia's best-neighbour tables. A band
   enters the fit only for a unique point-source match with A-quality
-  photometry. W1/W2 are held out of `fit` by default.
+  photometry and clean contamination flags (2MASS `cc_flg` and `gal_contam`
+  from the IRSA point source catalogue). W1/W2 are held out of `fit` by default.
 - Optional SPHEREx QR2 spectra ([SPHEREx downloads](docs/spherex.md)).
 - Gaia G/BP/RP are kept as metadata, not fit channels. Outside the
   subdwarf route no ultraviolet data and no XP below 392 nm enter a fit, so

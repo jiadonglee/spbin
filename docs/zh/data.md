@@ -65,7 +65,7 @@ sed = download("858860697467058688", cache_dir="data")
 sed = download(ra=120.0, dec=30.0, radius_arcsec=2.0, cache_dir="data")
 ```
 
-返回 `SED`。目录、原始 XP、校准后 XP 和 `sed.npz` 保存在单源目录中。已有缓存会复用；`refresh=True` 更新源数据。测光质量选择保留唯一点源匹配与 A 级测光，WISE 还要求污染标记为零。下载使用 Gaia DR3 原始视差。
+返回 `SED`。目录、原始 XP、校准后 XP 和 `sed.npz` 保存在单源目录中。已有缓存会复用；`refresh=True` 更新源数据。测光质量选择保留唯一点源匹配与 A 级测光，WISE 污染标记以及 2MASS 的 `cc_flg` 和 `gal_contam`（取自 IRSA 点源表）都须为零。下载使用 Gaia DR3 原始视差。
 
 ### `query_gaia` 与 `download_gaia`
 

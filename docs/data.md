@@ -10,7 +10,9 @@ including the 2MASS PSC/XSC join. Source IDs are retained as exact strings.
 Catalogue magnitudes, errors and quality/match flags are stored in metadata
 and the cached raw tables. A band enters the quality mask only for a
 unique, point-source match with A-quality photometry and valid errors.
-WISE contamination flags must be zero. Upper limits remain in the raw
+WISE contamination flags must be zero, as must the 2MASS `cc_flg` of the
+band and `gal_contam`; Gaia's 2MASS copy omits these two, so `download`
+reads them from the IRSA point source catalogue by designation. Upper limits remain in the raw
 tables and are excluded from the Gaussian flux fit.
 
 Vega magnitudes are converted to Jy, then to the model's catalogue-equivalent

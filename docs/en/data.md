@@ -65,7 +65,7 @@ sed = download("858860697467058688", cache_dir="data")
 sed = download(ra=120.0, dec=30.0, radius_arcsec=2.0, cache_dir="data")
 ```
 
-Returns `SED`. The source cache stores catalogue tables, native XP, calibrated XP and `sed.npz`. Existing products are reused; `refresh=True` refreshes source data. Photometric selection requires unique point-source matches and A-quality bands, with zero WISE contamination flags. Downloaded parallaxes are the original Gaia DR3 values.
+Returns `SED`. The source cache stores catalogue tables, native XP, calibrated XP and `sed.npz`. Existing products are reused; `refresh=True` refreshes source data. Photometric selection requires unique point-source matches and A-quality bands, with zero WISE contamination flags and zero 2MASS `cc_flg` and `gal_contam` (read from the IRSA point source catalogue). Downloaded parallaxes are the original Gaia DR3 values.
 
 ### `query_gaia` and `download_gaia`
 
