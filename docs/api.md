@@ -168,10 +168,11 @@ and `preferred`, the simplest hypothesis within `tie` of the lowest
 objective. In the `ms` region `detection_statistic` holds
 objective(dwarf) − objective(composite) for `ms+ms` and `wd+dwarf`.
 `threshold` is `{"ms+ms": 59.0, "wd+dwarf": None}` when the fit has
-`feh=None`, `fit_parallax=True` and a fitted extinction, the configuration
-in which 0 of 197 independent RV-constant dwarfs exceed 59, and
+`feh=None`, `fit_parallax=True` and the extinction fitted under an
+`extinction_prior` 0.01--0.03 E wide, the configuration in which 0 of 197
+independent RV-constant dwarfs exceed 59, and
 `{"ms+ms": 102.0, "wd+dwarf": None}` when that extinction is fitted under
-`dust_prior`; otherwise it is `None`. No wd+dwarf threshold is calibrated
+`EdenhoferPrior` at the map's own width; otherwise it is `None`. No wd+dwarf threshold is calibrated
 ([validation](validation-whitedwarf.md#main-sequence-region-of-fit_star)).
 Unsupported regions, and the giant region without `labels`,
 return `result=None` with the reason in `location`.

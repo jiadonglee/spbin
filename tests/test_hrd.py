@@ -80,17 +80,17 @@ def test_ms_threshold_in_its_calibrated_configuration():
 
 
 class ClearQuery:
-    """Integrated map stand-in with no extinction along any line of sight."""
+    """Integrated map stand-in with no extinction along any line of sight and a 0.002 width."""
 
     integrated = True
-    n_samples = None
+    n_samples = 12
 
     def __call__(self, coords, mode="mean"):
-        return 0.
+        return .002 if mode == "std" else 0.
 
 
 def test_ms_threshold_under_the_dust_prior():
-    prior = EdenhoferPrior(ClearQuery(), sigma=.002)
+    prior = EdenhoferPrior(ClearQuery())
     result = fit_star(_mock_binary(.9, .7), feh=None, fit_parallax=True, extinction=None, dust_prior=prior)
     assert result["threshold"] == MS_THRESHOLD_DUST == {"ms+ms": 102.0, "wd+dwarf": None}
     assert result["detection_statistic"]["ms+ms"] > MS_THRESHOLD_DUST["ms+ms"]
@@ -114,15 +114,25 @@ def _stub_route(monkeypatch):
     monkeypatch.setattr("spbin.hrd.fit_whitedwarf_companion", route)
 
 
+MS_FIT = dict(feh=None, fit_parallax=True, extinction=None, extinction_prior=(0., .03))
+PMS_FIT = dict(fit_parallax=True, extinction=None, extinction_prior=(0., .03))
+
+
 @pytest.mark.parametrize("kwargs, options, expected", [
-    (dict(feh=None, fit_parallax=True, extinction=None), {}, MS_THRESHOLD),
-    (dict(feh=0.0), dict(companion_feh=None, fit_parallax=True, extinction=None), MS_THRESHOLD),
-    (dict(feh=None, fit_parallax=True, extinction=None), dict(dust_prior=object()), MS_THRESHOLD_DUST),
-    (dict(feh=None, fit_parallax=True, extinction=None), dict(companion_feh=0.0), None),
-    (dict(feh=None, fit_parallax=True, extinction=None), dict(fit_parallax=False), None),
-    (dict(feh=None, fit_parallax=True, extinction=None), dict(extinction=0.1), None),
-    (dict(feh=None, fit_parallax=True, extinction=None), dict(use_spherex=True), None),
-    (dict(feh=None, fit_parallax=True, extinction=None, age_gyr=5.0), {}, None),
+    (MS_FIT, {}, MS_THRESHOLD),
+    (dict(MS_FIT, extinction_prior=(.2, .01)), {}, MS_THRESHOLD),
+    (dict(feh=0.0), dict(companion_feh=None, fit_parallax=True, extinction=None, extinction_prior=(0., .03)),
+     MS_THRESHOLD),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery())), MS_THRESHOLD_DUST),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery(), sigma=.5)), None),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=object()), None),
+    (dict(MS_FIT, extinction_prior=(0., 1e-5)), {}, None),
+    (dict(MS_FIT, extinction_prior=(0., 1.)), {}, None),
+    (MS_FIT, dict(companion_feh=0.0), None),
+    (MS_FIT, dict(fit_parallax=False), None),
+    (MS_FIT, dict(extinction=0.1, extinction_prior=None), None),
+    (MS_FIT, dict(use_spherex=True), None),
+    (dict(MS_FIT, age_gyr=5.0), {}, None),
 ])
 def test_ms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
     _stub_route(monkeypatch)
@@ -131,10 +141,16 @@ def test_ms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, o
 
 
 @pytest.mark.parametrize("kwargs, options, expected", [
-    (dict(fit_parallax=True, extinction=None), {}, PMS_THRESHOLD),
-    (dict(fit_parallax=True, extinction=None), dict(companion_feh=-0.3), None),
-    (dict(fit_parallax=True, extinction=None), dict(companion_age_gyr=0.05), None),
-    (dict(fit_parallax=True, extinction=None), dict(blue=(np.ones(5), np.ones(5))), None),
+    (PMS_FIT, {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, extinction_prior=(.1, .1)), {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, age_prior=(7.3, .3)), {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, age_prior=(7.3, .1)), {}, None),
+    (dict(PMS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery())), PMS_THRESHOLD),
+    (dict(PMS_FIT, extinction_prior=(0., .01)), {}, None),
+    (dict(PMS_FIT, extinction_prior=(0., .5)), {}, None),
+    (PMS_FIT, dict(companion_feh=-0.3), None),
+    (PMS_FIT, dict(companion_age_gyr=0.05), None),
+    (PMS_FIT, dict(blue=(np.ones(5), np.ones(5))), None),
 ])
 def test_pms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
     _stub_route(monkeypatch)

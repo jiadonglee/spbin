@@ -357,11 +357,13 @@ objectives compare directly; objectives of different regions do not. In the
 `fit`. `preferred` is the simplest hypothesis within `tie=1` of the lowest
 objective. In the `ms` region `detection_statistic` gives
 objective(dwarf) − objective(composite) for MS+MS and DA+dwarf. Fitted with
-`feh=None, fit_parallax=True` and a fitted extinction, an MS+MS statistic
+`feh=None, fit_parallax=True` and the extinction fitted under an
+`extinction_prior` 0.01--0.03 E wide, an MS+MS statistic
 above the returned `threshold` of 59 occurs for 0 of 197 independent
 RV-constant dwarfs and 22 per cent of 755 Gaia DR3 SB2s; near-twin pairs
-mostly stay below it. With the extinction under `dust_prior`, the returned
-threshold is 102, which 2 of the 197 exceed. DA+dwarf has no calibrated threshold in this
+mostly stay below it. With the extinction under `EdenhoferPrior` at the
+map's own width, the returned threshold is 102, which 2 of the 197 exceed.
+Other priors return no threshold. DA+dwarf has no calibrated threshold in this
 region: a WD giving about 1 per cent of the G light is not detected, and
 WD-dominated pairs belong to the `wd` region
 ([validation](docs/validation-whitedwarf.md#main-sequence-region-of-fit_star)). `region=` overrides the location and `options=` passes arguments to

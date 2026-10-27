@@ -9,7 +9,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from .extinction import extinction_curve
+from .extinction import EdenhoferPrior, extinction_curve
 from .fit import fit
 from .giant import _ks_zero_point, fit_giant_companion
 from .model import StellarModel
@@ -53,6 +53,15 @@ PMS_THRESHOLD = {"pms+pms": 25.0}
 # option (data channels, models, priors, hypotheses) leaves them uncalibrated.
 CALIBRATED_OPTIONS = {"extinction", "extinction_prior", "dust_prior", "fit_parallax",
                       "companion_age_gyr", "companion_feh"}
+# Gaussian extinction_prior widths (ZGR23 E) the calibrations cover: in the ms
+# region the training controls' map moments, whose widths sit at their 0.01
+# floor, and the independent controls' 0.03 (a 0.005 floor already gives 102);
+# in the pms region the cluster A_V widths of 0.03--0.106. A dust_prior is
+# covered only as EdenhoferPrior at the map's own width, and the pms age_prior
+# down to 0.3 dex.
+MS_EXTINCTION_SIGMA = (0.01, 0.03)
+PMS_EXTINCTION_SIGMA = (0.03, 0.11)
+PMS_AGE_PRIOR_DEX = 0.3
 
 
 @lru_cache(maxsize=1)
@@ -227,6 +236,14 @@ def locate(sed, *, extinction=0.0, dust_prior=None):
                 extinction_e=float(extinction))
 
 
+def _covered(call, widths):
+    """Whether the fitted extinction's prior is one a threshold calibration used."""
+    if call["dust_prior"] is not None:
+        return isinstance(call["dust_prior"], EdenhoferPrior) and call["dust_prior"].sigma is None
+    prior = call["extinction_prior"]
+    return prior is not None and widths[0] <= prior[1] <= widths[1]
+
+
 def _preferred(objectives, tie):
     """The simplest hypothesis within `tie` of the lowest objective."""
     best = min(objectives.values())
@@ -268,12 +285,15 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     detection_statistic holds objective(dwarf) - objective(composite) for
     ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit, after
     options, runs in its calibrated configuration (free age and [M/H],
-    fit_parallax=True and a fitted extinction on XP and 2MASS),
-    MS_THRESHOLD_DUST when that extinction is fitted under dust_prior,
+    fit_parallax=True and extinction fitted under an extinction_prior of
+    width MS_EXTINCTION_SIGMA on XP and 2MASS), MS_THRESHOLD_DUST when that
+    extinction is fitted under EdenhoferPrior at the map's own width,
     otherwise None. In the pms region it holds
     objective(pms) - objective(pms+pms), and threshold holds PMS_THRESHOLD
-    with [M/H] at 0, a free age (with or without age_prior), fit_parallax=True
-    and a fitted extinction. Options outside CALIBRATED_OPTIONS leave the
+    with [M/H] at 0, a free age (with no age_prior or one at least
+    PMS_AGE_PRIOR_DEX wide), fit_parallax=True and extinction fitted under
+    an extinction_prior of width PMS_EXTINCTION_SIGMA or EdenhoferPrior at
+    the map's own width. Options outside CALIBRATED_OPTIONS leave the
     threshold None.
     """
     options = dict(options or {})
@@ -340,10 +360,11 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
                   and call["extinction"] is None and call["companion_age_gyr"] is None)
     if region == "ms" and set(REGIONS["ms"]) <= set(objectives):
         out["detection_statistic"] = {k: objectives["dwarf"] - objectives[k] for k in ("ms+ms", "wd+dwarf")}
-        if calibrated and call["companion_feh"] is None:
+        if calibrated and call["companion_feh"] is None and _covered(call, MS_EXTINCTION_SIGMA):
             out["threshold"] = dict(MS_THRESHOLD_DUST if call["dust_prior"] is not None else MS_THRESHOLD)
     if region == "pms" and set(REGIONS["pms"]) <= set(objectives):
         out["detection_statistic"] = {"pms+pms": objectives["pms"] - objectives["pms+pms"]}
-        if calibrated and call["companion_feh"] == 0.0:
+        if (calibrated and call["companion_feh"] == 0.0 and _covered(call, PMS_EXTINCTION_SIGMA)
+                and (age_prior is None or age_prior[1] >= PMS_AGE_PRIOR_DEX)):
             out["threshold"] = dict(PMS_THRESHOLD)
     return out
