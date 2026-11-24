@@ -378,7 +378,7 @@ thin-H sensitivity. `predict(teff, mass)` gives 10-pc fluxes;
 `teff_at_age(mass, age_gyr)` stays within cooling-table support.
 
 `fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True,
-free_radius=False, companion_age_gyr=5., companion_feh=0., extinction=0.,
+free_radius=False, companion_age_gyr="default", companion_feh=0., extinction=0.,
 extinction_prior=None, dust_prior=None, parallax=None, fit_parallax=False,
 blue=None, galex=None, use_spherex=False, whitedwarf_prior=None,
 companion_prior=None, hypotheses=None)` compares `dwarf`, `wd`, and `wd+dwarf`;

@@ -96,7 +96,7 @@ WhiteDwarfModel.teff_at_age(mass, age_gyr)
 ### `spbin.fit_whitedwarf_companion`
 
 ```python
-fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, free_radius=False, companion_age_gyr=5.0, companion_feh=0.0, extinction=0.0, extinction_prior=None, dust_prior=None, parallax=None, fit_parallax=False, blue=None, galex=None, use_spherex=False, whitedwarf_prior=None, companion_prior=None, hypotheses=None)
+fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, free_radius=False, companion_age_gyr='default', companion_feh=0.0, extinction=0.0, extinction_prior=None, dust_prior=None, parallax=None, fit_parallax=False, blue=None, galex=None, use_spherex=False, whitedwarf_prior=None, companion_prior=None, hypotheses=None)
 ```
 
 [Source / 源码](https://github.com/jiadonglee/spbin/blob/main/src/spbin/whitedwarf.py)

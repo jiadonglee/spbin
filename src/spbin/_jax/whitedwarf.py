@@ -550,7 +550,7 @@ def _summary(hyp, x, result, converged):
 
 
 def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, free_radius=False,
-                             companion_age_gyr=5., companion_feh=0., extinction=0., extinction_prior=None,
+                             companion_age_gyr="default", companion_feh=0., extinction=0., extinction_prior=None,
                              dust_prior=None, parallax=None, fit_parallax=False, blue=None, galex=None,
                              use_spherex=False, whitedwarf_prior=None, companion_prior=None,
                              hypotheses=None):
@@ -567,6 +567,10 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
     if unknown or not kinds:
         raise ValueError(f"unknown hypotheses: {sorted(unknown)}")
     pms = bool(set(kinds) & set(PMS_KINDS))
+    if isinstance(companion_age_gyr, str):
+        if companion_age_gyr != "default":
+            raise ValueError('companion_age_gyr is a number, None or "default"')
+        companion_age_gyr = None if pms else 5.
     if pms and set(kinds) & {"dwarf", "ms+ms", "wd+dwarf"}:
         raise ValueError("pms hypotheses are not fitted together with main-sequence dwarf hypotheses")
     default_wd, default_stellar = _default_models()

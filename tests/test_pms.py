@@ -73,8 +73,7 @@ def test_pms_hypotheses_in_the_whitedwarf_frame():
         fit_whitedwarf_companion(sed, hypotheses=("pms",), stellar=StellarModel())
     with pytest.raises(ValueError):
         fit_whitedwarf_companion(sed, hypotheses=("dwarf",), stellar=StellarModel(pms=True))
-    result = fit_whitedwarf_companion(sed, hypotheses=("pms",), companion_age_gyr=None,
-                                      companion_prior=dict(log_age=(7.5, .3)))
+    result = fit_whitedwarf_companion(sed, hypotheses=("pms",), companion_prior=dict(log_age=(7.5, .3)))
     labels = result["hypotheses"]["pms"]["companion"]
     assert labels["log_age"] == pytest.approx(np.log10(labels["age_gyr"]) + 9)
     assert abs(labels["log_age"] - np.log10(2e7)) < .1
@@ -116,3 +115,10 @@ def test_jax_whitedwarf_frame_refuses_the_pms_model_for_dwarfs(pms):
     from spbin._jax.whitedwarf import fit_whitedwarf_companion as jax_fit
     with pytest.raises(ValueError, match="pms"):
         jax_fit(_mock(.6, 0), hypotheses=("dwarf",), stellar=pms, companion_age_gyr=.05)
+
+
+def test_jax_pms_age_is_free_by_default():
+    pytest.importorskip("jax")
+    from spbin._jax.whitedwarf import fit_whitedwarf_companion as jax_fit
+    labels = jax_fit(_mock(.5, 0.), hypotheses=("pms",))["hypotheses"]["pms"]["companion"]
+    assert labels["age_gyr"] < .5

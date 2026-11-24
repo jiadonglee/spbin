@@ -437,7 +437,7 @@ def _prepare(sed, model, stellar, extinction, extinction_prior, dust_prior, para
 
 
 def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, free_radius=False,
-                            companion_age_gyr=5., companion_feh=0., extinction=0., extinction_prior=None,
+                            companion_age_gyr="default", companion_feh=0., extinction=0., extinction_prior=None,
                             dust_prior=None, parallax=None, fit_parallax=False, blue=None, galex=None,
                             use_spherex=False, whitedwarf_prior=None, companion_prior=None,
                             hypotheses=None):
@@ -445,7 +445,8 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
 
     WD parameters are Teff and mass, with radius from thick-H C/O cooling
     tracks. free_radius=True instead fits Teff, log g and radius. Dwarf
-    age/metallicity are fixed unless None. Foreground extinction and
+    age/metallicity are fixed unless None; the default age is 5 Gyr for the
+    dwarf hypotheses and free for the pms hypotheses. Foreground extinction and
     parallax are shared; parallax can move within three catalogue sigma.
     beta_G is the reddened WD fraction of the total G light, not F2/F1.
     hypotheses selects from "dwarf", "ms+ms" (a coeval dwarf pair with free q,
@@ -464,6 +465,10 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
     if unknown or not kinds:
         raise ValueError(f"unknown hypotheses: {sorted(unknown)}")
     pms = bool(set(kinds) & set(PMS_KINDS))
+    if isinstance(companion_age_gyr, str):
+        if companion_age_gyr != "default":
+            raise ValueError('companion_age_gyr is a number, None or "default"')
+        companion_age_gyr = None if pms else 5.
     if pms and set(kinds) & {"dwarf", "ms+ms", "wd+dwarf"}:
         raise ValueError("pms hypotheses are not fitted together with main-sequence dwarf hypotheses")
     if pms:
