@@ -14,7 +14,6 @@ from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 import json
 from pathlib import Path
-import sys
 
 import numpy as np
 

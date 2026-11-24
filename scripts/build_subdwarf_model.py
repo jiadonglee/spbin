@@ -337,7 +337,6 @@ def _missing(coarse):
 
 
 def table(work):
-    from spbin.model import StellarModel
 
     picks = json.loads((work / "manifest.json").read_text())
     reduced = {}

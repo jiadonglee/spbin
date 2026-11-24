@@ -15,7 +15,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from ..extinction import extinction_curve
-from ..model import DATA, KS_ZERO_FLAMBDA, StellarModel
+from ..model import DATA, KS_ZERO_FLAMBDA
 
 # Columns of the packed model-error basis: cold, warm and hot terms.
 ERROR_TERMS = ("v2.1_cold", "v2.1_warm", "hot")
