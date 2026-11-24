@@ -223,8 +223,8 @@ Gaia DR3 SB2 orbits within 200 pc at |b| > 20 degrees with XP and both
 semi-amplitudes measured to 20% give 805 systems; `locate` places 755
 in the `ms` region (24 giant, 25 unsupported, 1 hot). Their median RV
 mass ratio K_bright/K_faint is 0.95. Above the ms+ms threshold of 59
-with free [M/H] are 167/755 (22%): 4/53 at q < 0.8, 31/139 at 0.8--0.9,
-44/173 at 0.9--0.95 and 88/390 above 0.95. For the detected systems the
+with free [M/H] are 165/755 (22%): 5/53 at q < 0.8, 31/139 at 0.8--0.9,
+42/173 at 0.9--0.95 and 87/390 above 0.95. For the detected systems the
 fitted q lies a median 0.08 below the RV ratio (5--95%: −0.22 to +0.06).
 Near-twin pairs have the shape of one star at twice its flux; at free
 age and [M/H] a single star accounts for most of them.

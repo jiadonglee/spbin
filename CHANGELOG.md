@@ -34,6 +34,14 @@ Changes since the last push to `main` on GitHub. Versions follow
 - `StellarModel(pms=True)` is refused where no pms fit is set up, and
   `hot_ms` is refused together with `use_wise`.
 - `galex()` matches GALEX through `crossmatch_uv`.
+- `fit_whitedwarf_companion` fits the age of the `pms` hypotheses by default
+  (`companion_age_gyr="default"`: 5 Gyr for the dwarf hypotheses, free for
+  `pms` and `pms+pms`), in the NumPy and JAX entry points.
+- `scripts/ms_threshold_dust.py` adds the 2MASS contamination flags by
+  designation before it screens the bands. With them 5 of the 351 controls
+  and 36 of the 755 SB2s lose 2MASS bands. The thresholds of 59 and 102 and
+  the control counts above them are unchanged; the SB2s above 59 are 165 of
+  755.
 - The package version is defined once, in `spbin.__version__`.
 
 ### Fixed

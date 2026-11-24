@@ -90,6 +90,22 @@ class CachedDust:
     penalty = staticmethod(EdenhoferPrior.penalty)
 
 
+def with_flags(tmass, path):
+    """Add the 2MASS cc_flg and gal_contam of the IRSA point source catalogue,
+    matched by designation and cached at path."""
+    from astropy.table import Table, join, vstack
+    from spbin.fetch import IRSA_TAP, _tap
+    if path.exists():
+        flags = Table.read(path, format="ascii.ecsv")
+    else:
+        names = [str(d) for d in tmass["designation"]]
+        flags = vstack([_tap("SELECT designation, cc_flg, gal_contam FROM fp_psc WHERE designation IN ("
+                             + ",".join(f"'{d}'" for d in names[i:i + 100]) + ")", IRSA_TAP)
+                        for i in range(0, len(names), 100)])
+        flags.write(path, format="ascii.ecsv")
+    return join(tmass, flags, keys="designation", join_type="left")
+
+
 def build_sed(sid, gaia, flux, error, tmass):
     """XP61 + accepted 2MASS JHKs, as validate_ms.py builds them."""
     from spbin import SED
@@ -118,7 +134,7 @@ def inputs():
         directory = DATA / f"xp_{kind}"
         gaia = {int(r["source_id"]): {k: np.nan if np.ma.is_masked(r[k]) else float(r[k]) for k in r.colnames}
                 for r in Table.read(directory / "gaia.ecsv")}
-        tmass = Table.read(directory / "tmass_ms.ecsv")
+        tmass = with_flags(Table.read(directory / "tmass_ms.ecsv"), directory / "tmass_flags.ecsv")
         tmass_ids = np.asarray(tmass["source_id"], np.int64)
         with np.load(directory / "calibrated.npz") as a:
             index = {int(v): i for i, v in enumerate(a["source_id"])}
