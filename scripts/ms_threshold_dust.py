@@ -20,7 +20,7 @@ SB2s that the calibration run placed in ms instead: their calibration
 configuration is gauss, the dust configuration map, and summary gives the
 fraction above 59, 76 and 102 overall and in bins of the RV mass ratio.
 
-    python scripts/ms_threshold_dust.py inputs   # SEDs and training moments (local data)
+    python scripts/ms_threshold_dust.py inputs   # SEDs and training moments (local data; 2MASS flags from IRSA)
     python scripts/ms_threshold_dust.py dust     # Edenhofer moments still missing (needs the map)
     python scripts/ms_threshold_dust.py fit      # WORKERS processes -> fits.jsonl, resumes
     python scripts/ms_threshold_dust.py reseed   # single-star refits above RESEED_ABOVE, resumes

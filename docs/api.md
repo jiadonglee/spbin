@@ -388,6 +388,10 @@ metallicity, fitted parallax and extinction).
 `companions=False` compares the two single-star hypotheses. `hypotheses=`
 selects any of `dwarf`, `ms+ms` (a coeval dwarf pair with free q, one
 component with fully correlated model errors), `wd` and `wd+dwarf`.
+`pms` and `pms+pms` are the single star and the coeval pair on
+`StellarModel(pms=True)`. `companion_age_gyr="default"` holds the dwarf
+hypotheses at 5 Gyr and fits the age of the pms hypotheses; a number fixes
+the age and `None` fits it.
 
 `whitedwarf_light_limit(sed, *, masses=(.45,.6,.8,1.,1.2), temperatures=None,
 cooling_ages_gyr=None, delta=9., luminous_mass=None, companion_age_gyr=5.,
