@@ -232,8 +232,8 @@ parallax and E.
   - The anchors start at 7000 K, so below that the offset is held at the first
     node. At 6.8 kK the blue channels then lie up to 0.1 in ln above CoolUV and
     above APOGEE dwarfs, and carry 12 per cent error.
-- **F/G/K star (`fg_ms`).** From `StellarModel()`, coeval with the giant
-  and at its [M/H].
+- **F/G/K star (`fg_ms`).** From `StellarModel()` at the giant's [M/H] with a
+  free age. The template giant carries no age, so the pair is not held coeval.
   - Its blue XP channels are its 392 nm channel times an empirical colour
     ln(F / F_392), the kernel-weighted median of 35 k APOGEE DR17 dwarfs
     within 500 pc at E < 0.05. The table spans 4400--6900 K and [M/H] -1 to

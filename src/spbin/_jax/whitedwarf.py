@@ -4,15 +4,17 @@
 version. Each hypothesis is one compiled objective on a fixed data layout:
 the 168 channels, six blue XP points (332-382 nm) and GALEX FUV/NUV, with 0/1
 weights for the slots a star uses, so one compile serves every star of a
-configuration (hypothesis kind, free parameters, free radius, hot stellar
+configuration (hypothesis kind, free parameters, free radius, stellar
 route). The dwarf (or coeval pair as one component with fully correlated
-model errors) contributes the 12 low-rank error columns of `stellar`; the DA
-contributes a diagonal fractional error. Model errors are taken at the
-observed flux and shared by light fraction, as in numpy.
+model errors) contributes the low-rank error columns of `stellar`; the DA
+contributes a diagonal fractional error. "pms" and "pms+pms" are the single
+star and the coeval pair on StellarModel(pms=True). Model errors are taken
+at the observed flux and shared by light fraction, as in numpy.
 
 The search follows numpy: the seed grid is scored in one `vmap`, the best
-three seeds are refined by a scipy-semantics Nelder-Mead (maxfev 4000), and
-one restart runs from the best endpoint with the initial steps. The result
+three seeds (for the pms single with a free age, also the best seed of each
+age) are refined by a scipy-semantics Nelder-Mead (maxfev 4000), and one
+restart runs from the best endpoint with the initial steps. The result
 dict is rebuilt with the numpy model at the best endpoint numpy supports, so
 the reported objective is numpy's. A dust prior is pre-sampled on a parallax
 grid per star, as in `_jax.fit`.
@@ -31,7 +33,8 @@ import numpy as np
 from ..extinction import extinction_curve
 from ..model import StellarModel
 from ..subdwarf import H_C_OVER_K_NM
-from ..whitedwarf import G_CGS, MSUN_G, RSUN_CM, WhiteDwarfModel, _Hypothesis, _prepare
+from ..whitedwarf import (AGE_SEEDS, G_CGS, MSUN_G, PAIR, PMS_KINDS, RSUN_CM, SEED_MASSES,
+                          WhiteDwarfModel, _Hypothesis, _prepare)
 from . import likelihood, stellar
 from .arrays import ModelArrays
 from .fit import _dust_grid, _model_arrays, _nelder_mead
@@ -44,7 +47,7 @@ N_DATA = 176
 SLOTS = ("t", "m", "g", "r", "primary", "age", "feh", "q", "e", "z")
 STEPS = dict(t=.08, m=.05, g=.1, r=.05, primary=.05, age=.2, feh=.1, q=.1, e=.02, z=.2)
 WD_LABELS = ("teff", "mass", "logg", "radius")
-DWARF_LABELS = ("teff", "mass", "logg", "radius", "age_gyr", "feh")
+DWARF_LABELS = ("teff", "mass", "logg", "radius", "age_gyr", "feh", "log_age")
 UV_TEFF_K = (6812., 41430.)  # empirical GALEX calibration range of the DA model
 MAXFEV, XATOL, FATOL = 4000, 1e-5, 1e-4
 
@@ -198,7 +201,7 @@ class Problem(eqx.Module):
     dust_fail: jax.Array
     dust_flag: jax.Array
     wd_prior: jax.Array  # (3, 4) mean, sigma, flag for teff, mass, logg, radius
-    companion_prior: jax.Array  # (3, 6) the same for teff, mass, logg, radius, age_gyr, feh
+    companion_prior: jax.Array  # (3, 7) the same for DWARF_LABELS
 
 
 class Spec(NamedTuple):
@@ -233,7 +236,7 @@ def dwarf(problem, mass, age, feh, scale, e, q=0.0):
     teff = pred.labels[0, 0]
     full = pred.flux_10pc * scale
     attenuation = jnp.exp(-e * wd.curve)
-    columns, variance = stellar.error_factors(problem.stellar, teff, pred.flux_10pc, scale)
+    columns, variance = stellar.error_factors(problem.stellar, teff, pred.flux_10pc, scale, age)
     columns, variance = columns * attenuation[:, None], variance * attenuation**2
     safe_teff = jnp.where(pred.valid, teff, 5000.0)
     coarse = jnp.exp(jnp.interp(wd.coarse_nm, wd.xp_nm, jnp.log(jnp.maximum(full[:61], 1e-300))))
@@ -244,7 +247,7 @@ def dwarf(problem, mass, age, feh, scale, e, q=0.0):
                        jnp.where(wd.coarse_nm > 992, bb * full[60] / anchor[1], coarse))
     coarse = coarse * jnp.exp(-e * wd.coarse_curve)
     extra = jnp.concatenate([jnp.interp(wd.blue_nm, wd.coarse_nm, coarse), wd.passbands[3:] @ coarse])
-    labels = jnp.stack([teff, mass, pred.logg[0], pred.radius[0], age, feh])
+    labels = jnp.stack([teff, mass, pred.logg[0], pred.radius[0], age, feh, jnp.log10(age) + 9])
     component = Component(
         flux=jnp.concatenate([full * attenuation, extra]),
         variance=jnp.concatenate([variance, (.5 * extra)**2]),
@@ -315,8 +318,8 @@ def _evaluate(theta, problem, spec):
         flux, variance, valid = flux + wd.flux, variance + wd.variance, valid & wd.valid
         penalty += _prior(wd.labels, problem.wd_prior)
     if spec.kind != "wd":
-        age = jnp.clip(jnp.exp(v["age"]), .5, 10.) if spec.age_free else problem.age
-        q = v["q"] if spec.kind == "ms+ms" else 0.0
+        age = jnp.clip(jnp.exp(v["age"]), *problem.stellar.age_range_gyr) if spec.age_free else problem.age
+        q = v["q"] if spec.kind in PAIR else 0.0
         companion, columns = dwarf(problem, jnp.exp(v["primary"]), age, v["feh"], scale, e, q)
         flux, variance, valid = flux + companion.flux, variance + companion.variance, valid & companion.valid
         penalty += _prior(companion.labels, problem.companion_prior)
@@ -379,6 +382,11 @@ def _wd_arrays(model):
 @lru_cache(maxsize=1)
 def _default_models():
     return WhiteDwarfModel(), StellarModel()
+
+
+@lru_cache(maxsize=1)
+def _default_pms_stellar():
+    return StellarModel(pms=True)
 
 
 def _prior_rows(prior, keys):
@@ -444,16 +452,21 @@ def _seeds(hyp, initial):
     temperatures = [8000, 11000, 15000, 22000, 35000, 60000] if "t" in hyp.names else [15000]
     masses = [.2, .4, .7, 1., 1.3] if "primary" in hyp.names else [.8]
     ages = [5.]
-    if hyp.kind in ("dwarf", "ms+ms") and hyp.age is None:
-        masses = np.linspace(.1, 2.2, 22)
-        ages = [1., 2., 5., 8., 9.8]
+    if hyp.kind in PMS_KINDS:
+        masses = SEED_MASSES["pms"]
+        ages = AGE_SEEDS["pms"] if hyp.age is None else ages
+    elif hyp.kind in ("dwarf", "ms+ms") and hyp.age is None:
+        masses = SEED_MASSES["ms"]
+        ages = AGE_SEEDS["ms"]
     ratios = [.3, .6, .9, 1.] if "q" in hyp.names else [.6]
     seeds = []
     if initial is not None:
-        # A companion adds light: also start from less massive primaries.
+        # A companion adds light: also start from less massive primaries. A pms pair
+        # also starts at the single star with a faint companion.
         primary = {**base, **initial}["primary"]
+        starts = ratios + [.1] if hyp.kind == "pms+pms" else ratios
         seeds.extend({**base, **initial, "t": np.log(t), "q": q, "primary": max(primary + s, np.log(.1))}
-                     for t in temperatures for q in ratios for s in np.log([1., .97, .93, .87, .8]))
+                     for t in temperatures for q in starts for s in np.log([1., .97, .93, .87, .8]))
     for t, mass, age, q in product(temperatures, masses, ages, ratios):
         v = dict(base, t=np.log(t), primary=np.log(mass), age=np.log(age), q=q)
         if hyp.free_radius and "t" in hyp.names:
@@ -476,7 +489,14 @@ def fit_hypothesis(hyp, problem, initial=None):
     thetas = np.tile(template, (len(seeds), 1))
     thetas[:, free] = [[v[k] for k in hyp.names] for v in seeds]
     scores = np.asarray(_scores(jnp.asarray(thetas), problem, spec))
-    order = np.argsort(scores, kind="stable")[:3]
+    ranked = np.argsort(scores, kind="stable")
+    order = ranked[:3]
+    if hyp.kind == "pms" and hyp.age is None:
+        # As numpy: the pms single also starts from the best seed of every age, after the
+        # three best; old seeds rank well near the main sequence and can all lie in the old basin.
+        ages = np.array([v["age"] for v in seeds])[ranked]
+        first = ranked[np.sort(np.unique(ages, return_index=True)[1])]
+        order = np.concatenate([order, first[~np.isin(first, order)]])
     order = order[scores[order] < 1e29]
     if not len(order):
         return dict(objective=np.inf, converged=False, hypothesis=hyp.kind), None
@@ -530,11 +550,12 @@ def _summary(hyp, x, result, converged):
 
 
 def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, free_radius=False,
-                             companion_age_gyr=5., companion_feh=0., extinction=0., extinction_prior=None,
+                             companion_age_gyr="default", companion_feh=0., extinction=0., extinction_prior=None,
                              dust_prior=None, parallax=None, fit_parallax=False, blue=None, galex=None,
                              use_spherex=False, whitedwarf_prior=None, companion_prior=None,
                              hypotheses=None):
-    """Compare one dwarf, a coeval dwarf pair, one DA WD and DA+dwarf on identical data.
+    """Compare one dwarf, a coeval dwarf pair, one DA WD and DA+dwarf on identical data,
+    or the pms single star and pair.
 
     Same arguments and result as `spbin.whitedwarf.fit_whitedwarf_companion`,
     on the compiled frame. Default models are built once per process; pass the
@@ -542,23 +563,37 @@ def fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True, 
     """
     kinds = (tuple(hypotheses) if hypotheses is not None
              else ("dwarf", "wd", "wd+dwarf") if companions else ("dwarf", "wd"))
-    unknown = set(kinds) - {"dwarf", "ms+ms", "wd", "wd+dwarf"}
+    unknown = set(kinds) - {"dwarf", "ms+ms", "wd", "wd+dwarf", *PMS_KINDS}
     if unknown or not kinds:
         raise ValueError(f"unknown hypotheses: {sorted(unknown)}")
+    pms = bool(set(kinds) & set(PMS_KINDS))
+    if isinstance(companion_age_gyr, str):
+        if companion_age_gyr != "default":
+            raise ValueError('companion_age_gyr is a number, None or "default"')
+        companion_age_gyr = None if pms else 5.
+    if pms and set(kinds) & {"dwarf", "ms+ms", "wd+dwarf"}:
+        raise ValueError("pms hypotheses are not fitted together with main-sequence dwarf hypotheses")
     default_wd, default_stellar = _default_models()
+    if pms:
+        stellar = _default_pms_stellar() if stellar is None else stellar
+        if not stellar.pms:
+            raise ValueError("pms hypotheses need StellarModel(pms=True)")
+    elif stellar is not None and stellar.pms and set(kinds) - {"wd"}:
+        raise ValueError("dwarf hypotheses need a main-sequence StellarModel, not StellarModel(pms=True)")
     p = _prepare(sed, default_wd if model is None else model, default_stellar if stellar is None else stellar,
                  extinction, extinction_prior, dust_prior, parallax, fit_parallax, blue, galex, use_spherex,
                  whitedwarf_prior, companion_prior)
     problem = build_problem(p, companion_age_gyr)
     results = {}
     primary_seed = None
-    if "dwarf" in kinds:
-        kinds = ("dwarf",) + tuple(k for k in kinds if k != "dwarf")
+    single = "pms" if pms else "dwarf"
+    if single in kinds:
+        kinds = (single,) + tuple(k for k in kinds if k != single)
     for kind in kinds:
         hyp = _Hypothesis(p, kind, free_radius, companion_age_gyr, companion_feh)
         results[kind], values = fit_hypothesis(
-            hyp, problem, initial=primary_seed if kind in ("ms+ms", "wd+dwarf") else None)
-        if kind == "dwarf":
+            hyp, problem, initial=primary_seed if kind in PAIR + ("wd+dwarf",) else None)
+        if kind == single:
             primary_seed = values
     best = min(results, key=lambda k: results[k]["objective"])
     if not np.isfinite(results[best]["objective"]):

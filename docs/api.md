@@ -168,9 +168,11 @@ and `preferred`, the simplest hypothesis within `tie` of the lowest
 objective. In the `ms` region `detection_statistic` holds
 objective(dwarf) − objective(composite) for `ms+ms` and `wd+dwarf`.
 `threshold` is `{"ms+ms": 59.0, "wd+dwarf": None}` when the fit has
-`feh=None`, `fit_parallax=True` and a fitted extinction, the configuration
-in which 0 of 197 independent RV-constant dwarfs exceed 59; otherwise it
-is `None`. No wd+dwarf threshold is calibrated
+`feh=None`, `fit_parallax=True` and the extinction fitted under an
+`extinction_prior` 0.01--0.03 E wide, the configuration in which 0 of 197
+independent RV-constant dwarfs exceed 59, and
+`{"ms+ms": 102.0, "wd+dwarf": None}` when that extinction is fitted under
+`EdenhoferPrior` at the map's own width; otherwise it is `None`. No wd+dwarf threshold is calibrated
 ([validation](validation-whitedwarf.md#main-sequence-region-of-fit_star)).
 Unsupported regions, and the giant region without `labels`,
 return `result=None` with the reason in `location`.
@@ -292,8 +294,9 @@ and without `fgk` when `companions=("giant",)`), `delta` (each objective minus t
   - `hot_ms=True` adds `ms+giant`: a hot star of solar [M/H] from
     `StellarModel(hot=True)`, 6800--30000 K, whose blue XP and GALEX fluxes come
     from the hot UV table. It reports `ms`.
-  - `fg_ms=True` adds `fg+giant`: an F/G/K star from `StellarModel()`, coeval
-    with the giant and at its [M/H], whose blue XP channels come from an
+  - `fg_ms=True` adds `fg+giant`: an F/G/K star from `StellarModel()` at the
+    giant's [M/H] with a free age (the template giant carries none), whose blue
+    XP channels come from an
     empirical colour table of APOGEE dwarfs (`CoolUV`, 4400--6900 K). It
     reports `fg`.
   - The single giant is re-polished from each pair.
@@ -317,7 +320,9 @@ cached continuous spectrum and returns `(flux, error)` for `blue=`; it is
 validated for single subdwarfs and biases composites
 ([validation](validation-subdwarf.md)).
 `galex(sed, cache_dir="data")` returns GALEX GR6/7 AIS FUV and NUV with a
-usable flag (below the count-rate roll-off, no artifact) for `galex=`;
+usable flag (below the count-rate roll-off, artifact flag present and at most
+1, a single GALEX source) for `galex=`; it matches through `crossmatch_uv`,
+with the Gaia position moved to the GALEX epoch;
 GALEX needs `tiers=("H",)` and pulls Teff low against spectroscopy, so it
 is for diagnostics. `SubdwarfModel(correction="ab",
 calibration="bundled")` evaluates the table:
@@ -373,7 +378,7 @@ thin-H sensitivity. `predict(teff, mass)` gives 10-pc fluxes;
 `teff_at_age(mass, age_gyr)` stays within cooling-table support.
 
 `fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True,
-free_radius=False, companion_age_gyr=5., companion_feh=0., extinction=0.,
+free_radius=False, companion_age_gyr="default", companion_feh=0., extinction=0.,
 extinction_prior=None, dust_prior=None, parallax=None, fit_parallax=False,
 blue=None, galex=None, use_spherex=False, whitedwarf_prior=None,
 companion_prior=None, hypotheses=None)` compares `dwarf`, `wd`, and `wd+dwarf`;
@@ -383,6 +388,10 @@ metallicity, fitted parallax and extinction).
 `companions=False` compares the two single-star hypotheses. `hypotheses=`
 selects any of `dwarf`, `ms+ms` (a coeval dwarf pair with free q, one
 component with fully correlated model errors), `wd` and `wd+dwarf`.
+`pms` and `pms+pms` are the single star and the coeval pair on
+`StellarModel(pms=True)`. `companion_age_gyr="default"` holds the dwarf
+hypotheses at 5 Gyr and fits the age of the pms hypotheses; a number fixes
+the age and `None` fits it.
 
 `whitedwarf_light_limit(sed, *, masses=(.45,.6,.8,1.,1.2), temperatures=None,
 cooling_ages_gyr=None, delta=9., luminous_mass=None, companion_age_gyr=5.,

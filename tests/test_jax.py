@@ -362,3 +362,15 @@ def test_rejects_invalid_arguments(model, sed):
         jax_fit(sed, model=model, age_gyr=5.0, age_prior=(9.0, 0.3))
     with pytest.raises(ValueError, match="optimizer"):
         jax_fit(sed, model=model, optimizer="gd")
+
+
+@pytest.mark.parametrize("age, feh", [(1.0, 0.0), (5.0, -0.5)])
+def test_fit_nondefault_fixed_age_feh_matches_numpy(model, age, feh):
+    single = model.evaluate(0.9, 0.0, age, feh)
+    flux = single["flux_10pc"] * 0.01  # 10 mas
+    sed = SED(flux, flux * 0.01, np.ones(168, bool), 10.0, 0.05)
+    sed.metadata.update(ra=30.0, dec=10.0, phot_g_mean_mag=12.0)
+    reference = numpy_fit(sed, "single", model=model, age_gyr=age, feh=feh)
+    result = jax_fit(sed, "single", model=model, age_gyr=age, feh=feh)
+    np.testing.assert_allclose(result["m1"], reference["m1"], atol=1e-3)
+    np.testing.assert_allclose(result["objective"], reference["objective"], atol=1e-3)

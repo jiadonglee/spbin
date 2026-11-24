@@ -67,6 +67,7 @@ nav:
       - 适用范围: zh/limitations.md
       - 常见问题与示例: zh/faq.md
   - Technical reference:
+      - Models, results and scope: overview.md
       - API: api.md
       - Models: model.md
       - Data provenance: data.md

@@ -187,7 +187,20 @@ independent.
 | spectroscopic +/- 0.1 dex | 51 | 1/197 (2.4%) | 10 | 3/197 (1.5%) |
 
 With free [M/H], the ms+ms threshold of 59 holds the 2% criterion on the
-independent controls, and `fit_star` returns it in that configuration.
+independent controls, and `fit_star` returns it in that configuration with
+an `extinction_prior` 0.01--0.03 E wide, the widths of the two samples.
+
+The training controls set 59 under map moments with the width floored at
+0.01. Under `dust_prior` at the map's own width, as `EdenhoferPrior` gives
+it, the fitted E stays on the map mean (fitted minus map E: −0.0001 to
++0.0013 at 16–84%), and a single dwarf can no longer redden to absorb a red
+excess. 6 of the 154 training and 4 of the 197 independent controls then
+exceed 59, against 3 and 0 in the calibration configuration. Refitting the
+single star from 14 starts leaves all 10 above 59. The same rule on the
+training controls gives 102, which 2 of the 197 independent controls exceed
+(1.0%); `fit_star` returns this threshold when the extinction is fitted
+under `EdenhoferPrior` at the map's own width. A 0.005 floor on the map width gives the same value.
+`scripts/ms_threshold_dust.py` runs this check.
 No wd+dwarf threshold does: fixing [M/H] at solar lets a WD absorb
 metallicity mismatch (independent controls reach 89), and with free
 [M/H] the independent maximum, 23, lies above the training maximum, 13.
@@ -210,8 +223,8 @@ Gaia DR3 SB2 orbits within 200 pc at |b| > 20 degrees with XP and both
 semi-amplitudes measured to 20% give 805 systems; `locate` places 755
 in the `ms` region (24 giant, 25 unsupported, 1 hot). Their median RV
 mass ratio K_bright/K_faint is 0.95. Above the ms+ms threshold of 59
-with free [M/H] are 167/755 (22%): 4/53 at q < 0.8, 31/139 at 0.8--0.9,
-44/173 at 0.9--0.95 and 88/390 above 0.95. For the detected systems the
+with free [M/H] are 165/755 (22%): 5/53 at q < 0.8, 31/139 at 0.8--0.9,
+42/173 at 0.9--0.95 and 87/390 above 0.95. For the detected systems the
 fitted q lies a median 0.08 below the RV ratio (5--95%: −0.22 to +0.06).
 Near-twin pairs have the shape of one star at twice its flux; at free
 age and [M/H] a single star accounts for most of them.

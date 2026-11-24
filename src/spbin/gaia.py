@@ -157,14 +157,14 @@ def _archive_ids(path):
 
 def download_gaia(source_ids, *, products=("XP_CONTINUOUS",),
                   cache_dir="data/gaia-products", data_release="Gaia DR3",
-                  batch_size=100, workers=2, data_structure="RAW",
+                  batch_size=100, workers=2, data_structure="DATAMODEL_GAIA",
                   datalink_url=DATALINK, timeout=(30, 300)):
     """Download Gaia products in batches, retaining the original FITS ZIPs.
 
     Accepts integer/string IDs (duplicates removed in input order).
     ``products`` is a product name or sequence of names, e.g.
     XP_CONTINUOUS, RVS, EPOCH_PHOTOMETRY for DR3. Names must match DataLink.
-    ``data_structure`` is RAW or INDIVIDUAL. Requires spbin[download].
+    ``data_structure`` is DATAMODEL_GAIA or DATAMODEL_STANDARD. Requires spbin[download].
 
     Returns one dict per batch/product: product, source_ids (delivered),
     unavailable_source_ids (not advertised), path (Path or None), cached.
@@ -182,8 +182,8 @@ def download_gaia(source_ids, *, products=("XP_CONTINUOUS",),
     if (not isinstance(batch_size, Integral) or not 1 <= batch_size <= 5000
             or not isinstance(workers, Integral) or workers < 1):
         raise ValueError("batch_size must be 1..5000 and workers must be positive")
-    if data_structure not in ("RAW", "INDIVIDUAL"):
-        raise ValueError("data_structure must be RAW or INDIVIDUAL")
+    if data_structure not in ("DATAMODEL_GAIA", "DATAMODEL_STANDARD"):
+        raise ValueError("data_structure must be DATAMODEL_GAIA or DATAMODEL_STANDARD")
     directory = Path(cache_dir).expanduser()
     _bind(directory, {"source_ids": ids, "products": products,
                       "data_release": data_release, "batch_size": int(batch_size),

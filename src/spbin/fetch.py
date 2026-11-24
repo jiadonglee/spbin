@@ -15,6 +15,9 @@ ZERO_JY = (1594.0, 1024.0, 666.7, 309.540, 171.787)
 # 2MASS fluxes of the J-CAPS training data, relative to the conversion at the
 # model wavelengths: the model predicts J/H/Ks on this scale.
 TRAINING_SCALE = (0.98523, 0.98566, 0.99105, 1.0, 1.0)
+GAIA_TAP = "https://gea.esac.esa.int/tap-server/tap/sync"
+# 2MASS PSC artefact and extended-source contamination flags, which Gaia's copy omits.
+IRSA_TAP = "https://irsa.ipac.caltech.edu/TAP/sync"
 
 
 def _row_dict(row):
@@ -31,24 +34,24 @@ def _row_dict(row):
     return result
 
 
-def _tap(query):
+def _tap(query, url=GAIA_TAP):
     """One-source synchronous TAP query with a bounded network timeout."""
     import requests
     from astropy.table import Table
-    response = requests.get("https://gea.esac.esa.int/tap-server/tap/sync",
+    response = requests.get(url,
         params={"REQUEST": "doQuery", "LANG": "ADQL", "FORMAT": "votable", "QUERY": query},
         timeout=60)
     response.raise_for_status()
-    table = Table.read(BytesIO(response.content), format="votable")
+    table = Table.read(BytesIO(response.content), format="votable", use_names_over_ids=True)
     table.rename_columns(table.colnames, [name.lower() for name in table.colnames])
     return table
 
 
-def _query_cached(query, path):
+def _query_cached(query, path, url=GAIA_TAP):
     from astropy.table import Table
     if path.exists():
         return Table.read(path, format="ascii.ecsv")
-    table = _tap(query)
+    table = _tap(query, url)
     table.write(path, format="ascii.ecsv", overwrite=True)
     return table
 
@@ -82,7 +85,9 @@ def _photometry(rows, wave):
         quality = str(row.get("ph_qual") or "")
         if label == "2MASS":
             point_source = row.get("ext_key") in (None, 0)
-            clean = [True] * 3
+            contamination = str(row.get("cc_flg") or "")
+            clean = [row.get("gal_contam") == 0 and len(contamination) > i and contamination[i] == "0"
+                     for i in range(3)]
         else:
             point_source = row.get("ext_flag", row.get("ext_flg", 0)) == 0
             contamination = str(row.get("cc_flags") or "")
@@ -106,7 +111,9 @@ def download(source_id=None, *, ra=None, dec=None, radius_arcsec=2.0,
 
     Requires spbin[download]. Uses Gaia's published crossmatches for
     2MASS/AllWISE. Native fluxes/errors and catalogue quality flags are
-    retained; only unambiguous, A-quality photometry enters the default mask.
+    retained, with the 2MASS cc_flg and gal_contam from the IRSA point source
+    catalogue; only unambiguous, A-quality photometry free of artefact and
+    extended-source contamination flags enters the default mask.
     Existing source downloads are reused unless refresh=True.
     uv=True also attaches GALEX, Swift/UVOT and XMM-OM crossmatches to
     metadata['uv']; UV records remain separate from the fitting channels.
@@ -130,7 +137,7 @@ def download(source_id=None, *, ra=None, dec=None, radius_arcsec=2.0,
         return sed
     if refresh:
         # These are this function's own cached public catalogue products.
-        for name in ("gaia.ecsv", "2mass.ecsv", "allwise.ecsv", "xp.xml", "xp.ecsv"):
+        for name in ("gaia.ecsv", "2mass.ecsv", "2mass_flags.ecsv", "allwise.ecsv", "xp.xml", "xp.ecsv"):
             (directory / name).unlink(missing_ok=True)
     gaia = _query_cached(f"""SELECT source_id, ra, dec, ref_epoch, pmra, pmdec,
         parallax, parallax_error, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag,
@@ -148,6 +155,11 @@ def download(source_id=None, *, ra=None, dec=None, radius_arcsec=2.0,
           ON j.clean_tmass_psc_xsc_oid=x.clean_tmass_psc_xsc_oid
         JOIN gaiadr1.tmass_original_valid AS tm ON j.original_psc_source_id=tm.designation
         WHERE x.source_id={source_id}""", directory / "2mass.ecsv")
+    if len(two_mass) == 1:
+        flags = _query_cached(f"""SELECT cc_flg, gal_contam FROM fp_psc
+            WHERE designation='{two_mass[0]["designation"]}'""", directory / "2mass_flags.ecsv", IRSA_TAP)
+        if len(flags) == 1:
+            two_mass["cc_flg"], two_mass["gal_contam"] = [flags[0]["cc_flg"]], [flags[0]["gal_contam"]]
     wise = _query_cached(f"""SELECT w.*, x.angular_distance AS match_arcsec,
         x.number_of_neighbours AS n_neighbours, x.number_of_mates AS n_mates
         FROM gaiadr3.allwise_best_neighbour AS x
@@ -170,7 +182,7 @@ def download(source_id=None, *, ra=None, dec=None, radius_arcsec=2.0,
             if not raw.exists():
                 from astroquery.gaia import Gaia
                 products = Gaia.load_data(ids=[source_id], data_release="Gaia DR3",
-                                          retrieval_type="XP_CONTINUOUS", data_structure="RAW",
+                                          retrieval_type="XP_CONTINUOUS", data_structure="DATAMODEL_GAIA",
                                           format="votable", verbose=False)
                 tables = [item.to_table() for items in products.values() for item in items]
                 if not tables:

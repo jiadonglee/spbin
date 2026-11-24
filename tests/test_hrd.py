@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from spbin import SED, StellarModel, WhiteDwarfModel
-from spbin.hrd import _region, fit_star, locate
+from spbin.extinction import EdenhoferPrior
+from spbin.hrd import MS_THRESHOLD, MS_THRESHOLD_DUST, PMS_THRESHOLD, _region, fit_star, locate
 
 FIXTURE = Path(__file__).parent / "fixtures" / "gaia_dr3_5148853253106611200.npz"
 
@@ -13,6 +14,10 @@ FIXTURE = Path(__file__).parent / "fixtures" / "gaia_dr3_5148853253106611200.npz
     ((12.0, 0.2, np.nan), "wd"),
     ((4.5, -0.3, np.nan), "sdb"),
     ((5.0, 0.8, 5800.0), "ms"),
+    ((8.0, 2.5, 3500.0), "pms"),
+    ((5.5, 1.5, 4300.0), "pms"),
+    ((5.0, 2.5, 3500.0), "unsupported"),
+    ((3.0, 1.0, 4500.0), "giant"),
     ((0.0, 0.3, 7800.0), "hot_ms"),
     ((2.3, 0.4, 7200.0), "ms"),
     ((0.15, 0.2, 7200.0), "hot_ms"),
@@ -40,7 +45,7 @@ def _mock_binary(m1, q):
     pred = stellar.evaluate(m1, q, 5, 0)
     flux = pred["flux_10pc"] * .01
     g = -2.5 * np.log10(np.sum(10**(-0.4 * pred["M_G"]))) + 5
-    metadata = dict(phot_g_mean_mag=g, phot_bp_mean_mag=g + 0.6, phot_rp_mean_mag=g - 0.6)
+    metadata = dict(ra=0., dec=0., phot_g_mean_mag=g, phot_bp_mean_mag=g + 0.6, phot_rp_mean_mag=g - 0.6)
     return SED(flux, flux * .01, WhiteDwarfModel().support & stellar.support, 10, .02, "mock", metadata)
 
 
@@ -65,13 +70,32 @@ def test_ms_threshold_in_its_calibrated_configuration():
     result = fit_star(_mock_binary(.9, .7), feh=None, fit_parallax=True, extinction=None,
                       extinction_prior=(0., .03))
     statistic, threshold = result["detection_statistic"], result["threshold"]
-    assert threshold == {"ms+ms": 59.0, "wd+dwarf": None}
+    assert threshold == MS_THRESHOLD == {"ms+ms": 59.0, "wd+dwarf": None}
     assert statistic["ms+ms"] > threshold["ms+ms"]
     assert statistic["ms+ms"] == pytest.approx(result["objectives"]["dwarf"] - result["objectives"]["ms+ms"])
     single = fit_star(_mock_binary(.8, 0), feh=None, fit_parallax=True, extinction=None,
                       extinction_prior=(0., .03))
     assert single["detection_statistic"]["ms+ms"] < threshold["ms+ms"]
     assert fit_star(SED.load(FIXTURE), region="sdb")["detection_statistic"] is None
+
+
+class ClearQuery:
+    """Integrated map stand-in with no extinction along any line of sight and a 0.002 width."""
+
+    integrated = True
+    n_samples = 12
+
+    def __call__(self, coords, mode="mean"):
+        return .002 if mode == "std" else 0.
+
+
+def test_ms_threshold_under_the_dust_prior():
+    prior = EdenhoferPrior(ClearQuery())
+    result = fit_star(_mock_binary(.9, .7), feh=None, fit_parallax=True, extinction=None, dust_prior=prior)
+    assert result["threshold"] == MS_THRESHOLD_DUST == {"ms+ms": 102.0, "wd+dwarf": None}
+    assert result["detection_statistic"]["ms+ms"] > MS_THRESHOLD_DUST["ms+ms"]
+    single = fit_star(_mock_binary(.8, 0), feh=None, fit_parallax=True, extinction=None, dust_prior=prior)
+    assert single["detection_statistic"]["ms+ms"] < MS_THRESHOLD["ms+ms"]
 
 
 def test_unsupported_and_label_free_giant_return_no_fit():
@@ -81,3 +105,70 @@ def test_unsupported_and_label_free_giant_return_no_fit():
     assert giant["result"] is None and "labels" in giant["location"]["reason"]
     with pytest.raises(ValueError):
         fit_star(sed, region="nowhere")
+
+
+def _stub_route(monkeypatch):
+    """Stand-in for the WD-route frame with fixed objectives for the asked hypotheses."""
+    def route(sed, *, hypotheses, **kwargs):
+        return dict(hypotheses={h: dict(objective=float(i)) for i, h in enumerate(hypotheses)})
+    monkeypatch.setattr("spbin.hrd.fit_whitedwarf_companion", route)
+
+
+MS_FIT = dict(feh=None, fit_parallax=True, extinction=None, extinction_prior=(0., .03))
+PMS_FIT = dict(fit_parallax=True, extinction=None, extinction_prior=(0., .03))
+
+
+@pytest.mark.parametrize("kwargs, options, expected", [
+    (MS_FIT, {}, MS_THRESHOLD),
+    (dict(MS_FIT, extinction_prior=(.2, .01)), {}, MS_THRESHOLD),
+    (dict(feh=0.0), dict(companion_feh=None, fit_parallax=True, extinction=None, extinction_prior=(0., .03)),
+     MS_THRESHOLD),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery())), MS_THRESHOLD_DUST),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery(), sigma=.5)), None),
+    (dict(MS_FIT, extinction_prior=None), dict(dust_prior=object()), None),
+    (dict(MS_FIT, extinction_prior=(0., 1e-5)), {}, None),
+    (dict(MS_FIT, extinction_prior=(0., 1.)), {}, None),
+    (MS_FIT, dict(companion_feh=0.0), None),
+    (MS_FIT, dict(fit_parallax=False), None),
+    (MS_FIT, dict(extinction=0.1, extinction_prior=None), None),
+    (MS_FIT, dict(use_spherex=True), None),
+    (dict(MS_FIT, age_gyr=5.0), {}, None),
+])
+def test_ms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
+    _stub_route(monkeypatch)
+    result = fit_star(_mock_binary(.9, .7), region="ms", options=options, **kwargs)
+    assert result["threshold"] == (None if expected is None else dict(expected))
+
+
+@pytest.mark.parametrize("kwargs, options, expected", [
+    (PMS_FIT, {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, extinction_prior=(.1, .1)), {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, age_prior=(7.3, .3)), {}, PMS_THRESHOLD),
+    (dict(PMS_FIT, age_prior=(7.3, .1)), {}, None),
+    (dict(PMS_FIT, extinction_prior=None), dict(dust_prior=EdenhoferPrior(ClearQuery())), PMS_THRESHOLD),
+    (dict(PMS_FIT, extinction_prior=(0., .01)), {}, None),
+    (dict(PMS_FIT, extinction_prior=(0., .5)), {}, None),
+    (PMS_FIT, dict(companion_feh=-0.3), None),
+    (PMS_FIT, dict(companion_age_gyr=0.05), None),
+    (PMS_FIT, dict(blue=(np.ones(5), np.ones(5))), None),
+])
+def test_pms_threshold_follows_the_configuration_that_runs(monkeypatch, kwargs, options, expected):
+    _stub_route(monkeypatch)
+    result = fit_star(_mock_binary(.9, .7), region="pms", options=options, **kwargs)
+    assert result["threshold"] == (None if expected is None else dict(expected))
+
+
+def test_giant_region_keeps_a_parallax_fit_request(monkeypatch):
+    calls = []
+
+    def route(sed, teff, logg, feh, **kwargs):
+        calls.append(kwargs)
+        return dict(rows=[dict(m2=0, objective=10.0), dict(m2=1.0, objective=0.0)])
+    monkeypatch.setattr("spbin.hrd.fit_giant_companion", route)
+    labels = dict(teff=(4500., 50.), logg=(2.5, .1), feh=(0., .05))
+    sed = _mock_binary(.9, .7)
+    refused = fit_star(sed, region="giant", labels=labels, fit_parallax=True)
+    assert refused["result"] is None and "luminosity" in refused["location"]["reason"]
+    assert calls == []
+    fitted = fit_star(sed, region="giant", labels=labels, fit_parallax=True, options=dict(luminosity="parsec"))
+    assert calls[-1]["luminosity"] == "parsec" and fitted["preferred"] == "giant+companion"

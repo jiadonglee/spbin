@@ -9,7 +9,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from .extinction import extinction_curve
+from .extinction import EdenhoferPrior, extinction_curve
 from .fit import fit
 from .giant import _ks_zero_point, fit_giant_companion
 from .model import StellarModel
@@ -21,13 +21,14 @@ LOGTE_STEP = 0.01
 PASSBAND_UM = dict(G=0.622, BP=0.511, RP=0.777, Ks=2.159)
 REGIONS = {
     "ms": ("dwarf", "ms+ms", "wd+dwarf"),
+    "pms": ("pms", "pms+pms"),
     "hot_ms": ("single", "binary"),
     "giant": ("giant", "giant+companion"),
     "sdb": ("fgk", "sdb", "sdb+dwarf", "sdb+subgiant"),
     "wd": ("dwarf", "wd", "wd+dwarf"),
     "unsupported": (),
 }
-SIMPLEST_FIRST = ("dwarf", "single", "fgk", "wd", "sdb", "ms+ms", "binary", "wd+dwarf",
+SIMPLEST_FIRST = ("dwarf", "pms", "single", "fgk", "wd", "sdb", "ms+ms", "pms+pms", "binary", "wd+dwarf",
                   "sdb+dwarf", "sdb+subgiant")
 # objective(dwarf) - objective(composite) in the ms region, exceeded by at most
 # 2% of 154 RV-constant APOGEE dwarfs (none of 197 independent ones) fitted on
@@ -35,6 +36,32 @@ SIMPLEST_FIRST = ("dwarf", "single", "fgk", "wd", "sdb", "ms+ms", "binary", "wd+
 # wd+dwarf threshold: any one set this way is exceeded by 3.6% of the
 # independent dwarfs (docs/validation-whitedwarf.md).
 MS_THRESHOLD = {"ms+ms": 59.0, "wd+dwarf": None}
+# The same rule with extinction under the Edenhofer dust_prior at the map's own
+# width: exceeded by 2% of the 154 training dwarfs and 2 of the 197 independent
+# ones. Pinned to the map, a single star cannot redden to absorb a red excess,
+# and 10 of the 351 exceed 59 (scripts/ms_threshold_dust.py).
+MS_THRESHOLD_DUST = {"ms+ms": 102.0, "wd+dwarf": None}
+# objective(pms) - objective(pms+pms) in the pms region, exceeded by 0.4% of 911
+# single members of 68 open clusters at 10-200 Myr (0.7% of the 613 at 10-100 Myr,
+# none of the 104 that locate places in the region) fitted on XP and 2MASS at
+# [M/H] = 0 with a free age, fitted parallax, fitted extinction and out-of-fold
+# pms corrections; by 0.5% with a 0.3 dex cluster-age prior and by 0.5% under the
+# Edenhofer dust_prior (none of the 105 placed in the region). 9 of 154
+# photometric binaries among the members exceed it, 3 of the 76 in the region.
+PMS_THRESHOLD = {"pms+pms": 25.0}
+# Options of the WD-route frame the calibrations above set themselves; any other
+# option (data channels, models, priors, hypotheses) leaves them uncalibrated.
+CALIBRATED_OPTIONS = {"extinction", "extinction_prior", "dust_prior", "fit_parallax",
+                      "companion_age_gyr", "companion_feh"}
+# Gaussian extinction_prior widths (ZGR23 E) the calibrations cover: in the ms
+# region the training controls' map moments, whose widths sit at their 0.01
+# floor, and the independent controls' 0.03 (a 0.005 floor already gives 102);
+# in the pms region the cluster A_V widths of 0.03--0.106. A dust_prior is
+# covered only as EdenhoferPrior at the map's own width, and the pms age_prior
+# down to 0.3 dex.
+MS_EXTINCTION_SIGMA = (0.01, 0.03)
+PMS_EXTINCTION_SIGMA = (0.03, 0.11)
+PMS_AGE_PRIOR_DEX = 0.3
 
 
 @lru_cache(maxsize=1)
@@ -42,26 +69,34 @@ def _stellar():
     return StellarModel()
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=1)
+def _pms_stellar():
+    return StellarModel(pms=True)
+
+
+@lru_cache(maxsize=3)
 def _parsec_points(route):
     """Single stars the route evaluates, at the PARSEC age and [M/H] nodes:
     log Teff, M_G, M_Ks, [M/H].
 
     "network": StellarModel() at 0.5--10 Gyr below 7500 K.
+    "pms": StellarModel(pms=True) at 10**6.6 yr--0.5 Gyr and [M/H] = 0 below 7500 K.
     "hot": StellarModel(hot=True) inside the hot-table support, 7000--30000 K.
     """
-    model = _stellar() if route == "network" else StellarModel(hot=True)
+    model = dict(network=_stellar, pms=_pms_stellar).get(route, lambda: StellarModel(hot=True))()
     masses = np.geomspace(0.08, model.mass_range[1], 600)
     low, high = model.age_range_gyr
     rows = []
     for metal, ages in model.tracks.items():
+        if route == "pms" and metal != 0.0:
+            continue
         for log_age in ages:
             age = 10**(log_age - 9)
             if not low - 1e-12 <= age <= high:
                 continue
             labels, physical = model._track(masses, age, metal)
             teff = labels[:, 0]
-            if route == "network":
+            if route != "hot":
                 keep = model.in_domain(labels) & (teff < 7500)
             else:
                 keep = model.in_hot_domain(teff, physical[:, 0], metal) & (teff >= 7000)
@@ -71,7 +106,7 @@ def _parsec_points(route):
     return np.vstack(rows)
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=3)
 def _dwarf_band(route):
     """Per log Teff bin, the M_G range of one route's supported stars; the
     bright edge is raised by BINARY_MAG for unresolved equal-mass binaries.
@@ -150,6 +185,9 @@ def _region(mg, bp_rp, teff):
         return "ms", "main sequence"
     if teff >= 7000 and hot_top[i] <= mg <= hot_bottom[i]:
         return "hot_ms", "A/B main sequence"
+    _, pms_top, _, _ = _dwarf_band("pms")
+    if teff < 7500 and pms_top[i] <= mg < top[i]:
+        return "pms", "above the main-sequence binary edge, inside the pre-main-sequence band"
     if mg > np.nanmax([bottom[i], hot_bottom[i]]):
         return "unsupported", "below the supported main sequence: metal-poor, or a parallax or photometry problem"
     if teff >= 7000 and mg > np.nanmin([top[i], hot_top[i]]):
@@ -198,6 +236,14 @@ def locate(sed, *, extinction=0.0, dust_prior=None):
                 extinction_e=float(extinction))
 
 
+def _covered(call, widths):
+    """Whether the fitted extinction's prior is one a threshold calibration used."""
+    if call["dust_prior"] is not None:
+        return isinstance(call["dust_prior"], EdenhoferPrior) and call["dust_prior"].sigma is None
+    prior = call["extinction_prior"]
+    return prior is not None and widths[0] <= prior[1] <= widths[1]
+
+
 def _preferred(objectives, tie):
     """The simplest hypothesis within `tie` of the lowest objective."""
     best = min(objectives.values())
@@ -206,22 +252,29 @@ def _preferred(objectives, tie):
 
 
 def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=None, dust_prior=None,
-             fit_parallax=False, age_gyr=None, feh=0.0, tie=1.0, options=None):
+             fit_parallax=False, age_gyr=None, feh=0.0, age_prior=None, tie=1.0, options=None):
     """Locate a star and fit the hypotheses of its HR-diagram region.
 
     Regions and hypotheses:
       ms      dwarf, ms+ms (coeval, free q) and wd+dwarf in the WD-route frame
+      pms     pms and pms+pms (coeval, free q) on StellarModel(pms=True) in the
+              WD-route frame, XP and 2MASS only
       hot_ms  single and coeval binary with StellarModel(hot=True)
       giant   fit_giant_companion; needs labels=dict(teff=, logg=, feh=) as
-              (mean, sigma) on the APOGEE scale
+              (mean, sigma) on the APOGEE scale, and with fit_parallax=True
+              a luminosity mode in options (luminosity="parsec" or "massfree")
       sdb     fit_subdwarf_companion
       wd      fit_whitedwarf_companion
     region= overrides the location. extinction is a fixed ZGR23 E, or None
     to fit it under extinction_prior=(mean, sigma) or dust_prior; the giant
     route always fits E and takes a fixed value as a 0.01-wide prior.
-    age_gyr and feh apply to the dwarfs of the ms, wd and hot_ms regions;
-    None fits them (age 0.5--10 Gyr on the network, from 4 Myr on the hot
-    route). With a free age, warm primaries trade age against a companion.
+    age_gyr and feh apply to the dwarfs of the ms, pms, wd and hot_ms
+    regions; None fits them (age 0.5--10 Gyr on the network, 10**6.6 yr--0.5
+    Gyr in the pms region, from 4 Myr on the hot route). With a free age, warm
+    primaries trade age against a companion. The pms region holds [M/H] at
+    feh, or at 0 for feh=None: a free [M/H] absorbs the youth excess as
+    metal-poorness. age_prior=(log10 age/yr, sigma in dex) adds a Gaussian
+    prior on the pms region's age, e.g. a cluster age with sigma 0.3.
     options are keyword arguments of the region's route function and take
     precedence.
 
@@ -230,9 +283,18 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     simplest hypothesis within `tie` of the lowest. Objectives are
     comparable only inside one region. In the ms region,
     detection_statistic holds objective(dwarf) - objective(composite) for
-    ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit runs in its
-    calibrated configuration (feh=None, fit_parallax=True and a fitted
-    extinction), otherwise None.
+    ms+ms and wd+dwarf; threshold holds MS_THRESHOLD when the fit, after
+    options, runs in its calibrated configuration (free age and [M/H],
+    fit_parallax=True and extinction fitted under an extinction_prior of
+    width MS_EXTINCTION_SIGMA on XP and 2MASS), MS_THRESHOLD_DUST when that
+    extinction is fitted under EdenhoferPrior at the map's own width,
+    otherwise None. In the pms region it holds
+    objective(pms) - objective(pms+pms), and threshold holds PMS_THRESHOLD
+    with [M/H] at 0, a free age (with no age_prior or one at least
+    PMS_AGE_PRIOR_DEX wide), fit_parallax=True and extinction fitted under
+    an extinction_prior of width PMS_EXTINCTION_SIGMA or EdenhoferPrior at
+    the map's own width. Options outside CALIBRATED_OPTIONS leave the
+    threshold None.
     """
     options = dict(options or {})
     guess = extinction if extinction is not None else extinction_prior[0] if extinction_prior else 0.0
@@ -250,10 +312,15 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
     if extinction is not None and (extinction_prior is not None or dust_prior is not None):
         raise ValueError("a fixed extinction takes no extinction prior")
     shared = dict(extinction=extinction, dust_prior=dust_prior, fit_parallax=fit_parallax)
-    if region in ("ms", "wd"):
+    if region in ("ms", "pms", "wd"):
         kwargs = dict(shared, hypotheses=REGIONS[region], extinction_prior=extinction_prior,
                       companion_age_gyr=age_gyr, companion_feh=feh)
-        result = fit_whitedwarf_companion(sed, **dict(kwargs, **options))
+        if region == "pms":
+            kwargs.update(stellar=_pms_stellar(), companion_feh=0.0 if feh is None else feh)
+            if age_prior is not None:
+                kwargs["companion_prior"] = dict(log_age=age_prior)
+        call = dict(kwargs, **options)
+        result = fit_whitedwarf_companion(sed, **call)
         objectives = {k: r["objective"] for k, r in result["hypotheses"].items()}
     elif region == "hot_ms":
         if extinction_prior is not None:
@@ -270,6 +337,11 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
             out["location"] = dict(location, reason=location["reason"]
                                    + "; the giant route needs labels=dict(teff=, logg=, feh=)")
             return out
+        if fit_parallax and options.get("luminosity") is None:
+            out["location"] = dict(location, reason=location["reason"]
+                                   + "; the giant route fits the parallax only with options=dict("
+                                   "luminosity='parsec' or 'massfree')")
+            return out
         if extinction is not None:
             extinction_prior = (extinction, 0.01)
         kwargs = dict(extinction_prior=extinction_prior, dust_prior=dust_prior)
@@ -284,8 +356,15 @@ def fit_star(sed, *, region=None, labels=None, extinction=0.0, extinction_prior=
                delta={k: v - best for k, v in objectives.items()},
                preferred=_preferred(objectives, tie) if region != "giant" else
                ("giant" if objectives["giant"] <= best + tie else "giant+companion"))
+    calibrated = (region in ("ms", "pms") and set(options) <= CALIBRATED_OPTIONS and call["fit_parallax"]
+                  and call["extinction"] is None and call["companion_age_gyr"] is None)
     if region == "ms" and set(REGIONS["ms"]) <= set(objectives):
         out["detection_statistic"] = {k: objectives["dwarf"] - objectives[k] for k in ("ms+ms", "wd+dwarf")}
-        if feh is None and fit_parallax and extinction is None:
-            out["threshold"] = dict(MS_THRESHOLD)
+        if calibrated and call["companion_feh"] is None and _covered(call, MS_EXTINCTION_SIGMA):
+            out["threshold"] = dict(MS_THRESHOLD_DUST if call["dust_prior"] is not None else MS_THRESHOLD)
+    if region == "pms" and set(REGIONS["pms"]) <= set(objectives):
+        out["detection_statistic"] = {"pms+pms": objectives["pms"] - objectives["pms+pms"]}
+        if (calibrated and call["companion_feh"] == 0.0 and _covered(call, PMS_EXTINCTION_SIGMA)
+                and (age_prior is None or age_prior[1] >= PMS_AGE_PRIOR_DEX)):
+            out["threshold"] = dict(PMS_THRESHOLD)
     return out

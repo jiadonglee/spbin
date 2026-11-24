@@ -58,7 +58,7 @@ catalogue. Public server jobs can expire before a delayed resume.
 
 `download_gaia(source_ids, *, products=("XP_CONTINUOUS",),
 cache_dir="data/gaia-products", data_release="Gaia DR3", batch_size=100,
-workers=2, data_structure="RAW", datalink_url=..., timeout=(30, 300))`
+workers=2, data_structure="DATAMODEL_GAIA", datalink_url=..., timeout=(30, 300))`
 returns a list of dictionaries, one per batch and requested product:
 
 - `product`: requested DataLink product name.
@@ -77,8 +77,8 @@ The downloader verifies source IDs before marking a batch complete. Product
 names must match the service exactly: an unadvertised name is reported as
 unavailable, so check names before interpreting an all-missing result.
 
-`RAW` groups data in server-defined FITS tables; `INDIVIDUAL` requests
-individual-source files. Both are returned in ZIP archives. The raw bytes,
+`DATAMODEL_GAIA` returns the archive's Gaia data model and
+`DATAMODEL_STANDARD` its standardised one. Both are returned in ZIP archives. The raw bytes,
 FITS headers, array columns, units and covariance information are retained.
 No XP calibration or resampling is applied, and RVS spectra retain the archive's
 normalization. Read a member without extracting it:
