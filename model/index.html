@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../overview/" class="md-tabs__link">
           
   
   
@@ -1224,6 +1224,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2206,8 +2234,8 @@ parallax and E.</p>
 <li>The anchors start at 7000 K, so below that the offset is held at the first
     node. At 6.8 kK the blue channels then lie up to 0.1 in ln above CoolUV and
     above APOGEE dwarfs, and carry 12 per cent error.</li>
-<li><strong>F/G/K star (<code>fg_ms</code>).</strong> From <code>StellarModel()</code>, coeval with the giant
-  and at its [M/H].</li>
+<li><strong>F/G/K star (<code>fg_ms</code>).</strong> From <code>StellarModel()</code> at the giant's [M/H] with a
+  free age. The template giant carries no age, so the pair is not held coeval.</li>
 <li>Its blue XP channels are its 392 nm channel times an empirical colour
     ln(F / F_392), the kernel-weighted median of 35 k APOGEE DR17 dwarfs
     within 500 pc at E &lt; 0.05. The table spans 4400--6900 K and [M/H] -1 to
@@ -2280,7 +2308,7 @@ parallax and E.</p>
   Rotation, emission, pulsation and chemical peculiarity are not modelled.</li>
 <li>XP and J/H/Ks alone do not constrain extinction for hot stars: fixed or
   dust-prior E carries the constraint. In noiseless injections with a
-  Gaussian E prior of width sqrt(0.03**2 + (0.1 E)**2), the 1-sigma Teff
+  Gaussian E prior of width sqrt(0.03<strong>2 + (0.1 E)</strong>2), the 1-sigma Teff
   width is 0.6--1.0 kK at 15 kK and 1.6--2.8 kK at 25 kK (E = 0--0.6).</li>
 <li>The giant route uses XP from 392 nm, so the Balmer jump is not used. Its
   companion is a non-rotating main-sequence star, and a greyer extinction

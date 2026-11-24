@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/" class="md-tabs__link">
+        <a href="../../overview/" class="md-tabs__link">
           
   
   
@@ -1329,6 +1329,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/" class="md-nav__link">
         
   
@@ -2069,7 +2097,7 @@
 <div class="highlight"><pre><span></span><code><span class="n">sed</span> <span class="o">=</span> <span class="n">download</span><span class="p">(</span><span class="s2">"858860697467058688"</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">"data"</span><span class="p">)</span>
 <span class="n">sed</span> <span class="o">=</span> <span class="n">download</span><span class="p">(</span><span class="n">ra</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">radius_arcsec</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">"data"</span><span class="p">)</span>
 </code></pre></div>
-<p>Returns <code>SED</code>. The source cache stores catalogue tables, native XP, calibrated XP and <code>sed.npz</code>. Existing products are reused; <code>refresh=True</code> refreshes source data. Photometric selection requires unique point-source matches and A-quality bands, with zero WISE contamination flags. Downloaded parallaxes are the original Gaia DR3 values.</p>
+<p>Returns <code>SED</code>. The source cache stores catalogue tables, native XP, calibrated XP and <code>sed.npz</code>. Existing products are reused; <code>refresh=True</code> refreshes source data. Photometric selection requires unique point-source matches and A-quality bands, with zero WISE contamination flags and zero 2MASS <code>cc_flg</code> and <code>gal_contam</code> (read from the IRSA point source catalogue). Downloaded parallaxes are the original Gaia DR3 values.</p>
 <h3 id="query_gaia-and-download_gaia"><code>query_gaia</code> and <code>download_gaia</code><a class="headerlink" href="#query_gaia-and-download_gaia" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">spbin</span><span class="w"> </span><span class="kn">import</span> <span class="n">query_gaia</span><span class="p">,</span> <span class="n">download_gaia</span>
 

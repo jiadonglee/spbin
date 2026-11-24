@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://jiadonglee.github.io/spbin/api/">
       
       
-        <link rel="prev" href="../zh/faq/">
+        <link rel="prev" href="../overview/">
       
       
         <link rel="next" href="../model/">
@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../overview/" class="md-tabs__link">
           
   
   
@@ -1224,6 +1224,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2222,9 +2250,11 @@ and <code>preferred</code>, the simplest hypothesis within <code>tie</code> of t
 objective. In the <code>ms</code> region <code>detection_statistic</code> holds
 objective(dwarf) − objective(composite) for <code>ms+ms</code> and <code>wd+dwarf</code>.
 <code>threshold</code> is <code>{"ms+ms": 59.0, "wd+dwarf": None}</code> when the fit has
-<code>feh=None</code>, <code>fit_parallax=True</code> and a fitted extinction, the configuration
-in which 0 of 197 independent RV-constant dwarfs exceed 59; otherwise it
-is <code>None</code>. No wd+dwarf threshold is calibrated
+<code>feh=None</code>, <code>fit_parallax=True</code> and the extinction fitted under an
+<code>extinction_prior</code> 0.01--0.03 E wide, the configuration in which 0 of 197
+independent RV-constant dwarfs exceed 59, and
+<code>{"ms+ms": 102.0, "wd+dwarf": None}</code> when that extinction is fitted under
+<code>EdenhoferPrior</code> at the map's own width; otherwise it is <code>None</code>. No wd+dwarf threshold is calibrated
 (<a href="../validation-whitedwarf/#main-sequence-region-of-fit_star">validation</a>).
 Unsupported regions, and the giant region without <code>labels</code>,
 return <code>result=None</code> with the reason in <code>location</code>.</p>
@@ -2333,8 +2363,9 @@ and without <code>fgk</code> when <code>companions=("giant",)</code>), <code>del
 <li><code>hot_ms=True</code> adds <code>ms+giant</code>: a hot star of solar [M/H] from
     <code>StellarModel(hot=True)</code>, 6800--30000 K, whose blue XP and GALEX fluxes come
     from the hot UV table. It reports <code>ms</code>.</li>
-<li><code>fg_ms=True</code> adds <code>fg+giant</code>: an F/G/K star from <code>StellarModel()</code>, coeval
-    with the giant and at its [M/H], whose blue XP channels come from an
+<li><code>fg_ms=True</code> adds <code>fg+giant</code>: an F/G/K star from <code>StellarModel()</code> at the
+    giant's [M/H] with a free age (the template giant carries none), whose blue
+    XP channels come from an
     empirical colour table of APOGEE dwarfs (<code>CoolUV</code>, 4400--6900 K). It
     reports <code>fg</code>.</li>
 <li>The single giant is re-polished from each pair.</li>
@@ -2358,7 +2389,9 @@ cached continuous spectrum and returns <code>(flux, error)</code> for <code>blue
 validated for single subdwarfs and biases composites
 (<a href="../validation-subdwarf/">validation</a>).
 <code>galex(sed, cache_dir="data")</code> returns GALEX GR6/7 AIS FUV and NUV with a
-usable flag (below the count-rate roll-off, no artifact) for <code>galex=</code>;
+usable flag (below the count-rate roll-off, artifact flag present and at most
+1, a single GALEX source) for <code>galex=</code>; it matches through <code>crossmatch_uv</code>,
+with the Gaia position moved to the GALEX epoch;
 GALEX needs <code>tiers=("H",)</code> and pulls Teff low against spectroscopy, so it
 is for diagnostics. <code>SubdwarfModel(correction="ab",
 calibration="bundled")</code> evaluates the table:
@@ -2404,7 +2437,7 @@ thin-H sensitivity. <code>predict(teff, mass)</code> gives 10-pc fluxes;
 <code>physical(teff, mass)</code> returns radius, gravity, luminosity and cooling age;
 <code>teff_at_age(mass, age_gyr)</code> stays within cooling-table support.</p>
 <p><code>fit_whitedwarf_companion(sed, *, model=None, stellar=None, companions=True,
-free_radius=False, companion_age_gyr=5., companion_feh=0., extinction=0.,
+free_radius=False, companion_age_gyr="default", companion_feh=0., extinction=0.,
 extinction_prior=None, dust_prior=None, parallax=None, fit_parallax=False,
 blue=None, galex=None, use_spherex=False, whitedwarf_prior=None,
 companion_prior=None, hypotheses=None)</code> compares <code>dwarf</code>, <code>wd</code>, and <code>wd+dwarf</code>;
@@ -2413,7 +2446,11 @@ companion_prior=None, hypotheses=None)</code> compares <code>dwarf</code>, <code
 metallicity, fitted parallax and extinction).
 <code>companions=False</code> compares the two single-star hypotheses. <code>hypotheses=</code>
 selects any of <code>dwarf</code>, <code>ms+ms</code> (a coeval dwarf pair with free q, one
-component with fully correlated model errors), <code>wd</code> and <code>wd+dwarf</code>.</p>
+component with fully correlated model errors), <code>wd</code> and <code>wd+dwarf</code>.
+<code>pms</code> and <code>pms+pms</code> are the single star and the coeval pair on
+<code>StellarModel(pms=True)</code>. <code>companion_age_gyr="default"</code> holds the dwarf
+hypotheses at 5 Gyr and fits the age of the pms hypotheses; a number fixes
+the age and <code>None</code> fits it.</p>
 <p><code>whitedwarf_light_limit(sed, *, masses=(.45,.6,.8,1.,1.2), temperatures=None,
 cooling_ages_gyr=None, delta=9., luminous_mass=None, companion_age_gyr=5.,
 companion_feh=0., galex_upper_limits=None, **kwargs)</code> takes the same data,

@@ -1,0 +1,2762 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Absolute-flux SED modelling for stars and binaries">
+      
+      
+      
+        <link rel="canonical" href="https://jiadonglee.github.io/spbin/overview/">
+      
+      
+        <link rel="prev" href="../zh/faq/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Models, results and scope - spbin</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#models-results-and-scope" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="spbin" class="md-header__button md-logo" aria-label="spbin" data-md-component="logo">
+      
+  <img src="../assets/spbin-logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            spbin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Models, results and scope
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jiadonglee/spbin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jiadonglee/spbin
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../en/" class="md-tabs__link">
+          
+  
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../zh/" class="md-tabs__link">
+          
+  
+  
+  中文
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Technical reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../validation/" class="md-tabs__link">
+          
+  
+  
+  Benchmarks
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="spbin" class="md-nav__button md-logo" aria-label="spbin" data-md-component="logo">
+      
+  <img src="../assets/spbin-logo.png" alt="logo">
+
+    </a>
+    spbin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jiadonglee/spbin" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jiadonglee/spbin
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data and downloads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/stellar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stellar fitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/companions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Companion models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/extinction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extinction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/orbits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orbits and likelihoods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plotting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API signatures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../en/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ and examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    中文
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    中文
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    项目介绍
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    快速开始
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    数据与下载
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/stellar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    恒星拟合
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/companions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    伴星模型
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/extinction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消光
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/orbits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    轨道与联合似然
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    绘图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API 签名
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    验证
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    适用范围
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../zh/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题与示例
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Technical reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Technical reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-the-model-is-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the model is built
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How the model is built">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cool-and-warm-dwarfs-an-empirical-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cool and warm dwarfs: an empirical network
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hot-dwarfs-calibrated-synthetic-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hot dwarfs: calibrated synthetic spectra
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stellar-evolution-parsec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stellar evolution: PARSEC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#red-giants-an-empirical-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Red giants: an empirical template
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capabilities-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capabilities and scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capabilities and scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-fits-measure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the fits measure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-covered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not covered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-star-located-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One star, located first
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fit-extinction-and-parallax-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fit extinction and parallax together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gaia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gaia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spherex/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SPHEREx
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../whitedwarf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    White dwarfs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extinction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extinction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orbit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Photocentre orbits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orblet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    orblet integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appearance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visual style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benchmarks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-warm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Warm stars
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-hot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hot stars
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-giant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Giants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-subdwarf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Subdwarfs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation-whitedwarf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    White dwarfs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extinction-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extinction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-the-model-is-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the model is built
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How the model is built">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cool-and-warm-dwarfs-an-empirical-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cool and warm dwarfs: an empirical network
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hot-dwarfs-calibrated-synthetic-spectra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hot dwarfs: calibrated synthetic spectra
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stellar-evolution-parsec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stellar evolution: PARSEC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#red-giants-an-empirical-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Red giants: an empirical template
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capabilities-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capabilities and scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capabilities and scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-fits-measure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the fits measure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-covered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not covered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-star-located-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One star, located first
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fit-extinction-and-parallax-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fit extinction and parallax together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#one-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="models-results-and-scope">Models, results and scope<a class="headerlink" href="#models-results-and-scope" title="Permanent link">&para;</a></h1>
+<p>How each model is built, what the fits measure on real and mock stars, and
+what the package does not cover.</p>
+<h2 id="how-the-model-is-built">How the model is built<a class="headerlink" href="#how-the-model-is-built" title="Permanent link">&para;</a></h2>
+<p>The model predicts absolute F_lambda at 10 pc on 168 channels: 61 Gaia XP
+points at 392--992 nm, 2MASS J/H/Ks, WISE W1/W2 and 102 SPHEREx channels,
+in 1e-18 W m^-2 nm^-1. Each part of the HR diagram comes from the source
+best constrained there:</p>
+<table>
+<thead>
+<tr>
+<th>Stars</th>
+<th>Teff</th>
+<th>Spectral shape</th>
+<th>Absolute flux</th>
+<th>Teff scale</th>
+<th>Model error, XP 0.4--1 um</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cool dwarfs (M, K, G)</td>
+<td>2800--6250 K</td>
+<td>empirical network trained on Gaia stars within 100 pc</td>
+<td>PARSEC M_Ks</td>
+<td>ASPCAP below 4500 K, IRFM above</td>
+<td>9% below 3800 K, 2% above 4200 K</td>
+</tr>
+<tr>
+<td>Warm dwarfs (F, early A)</td>
+<td>6250--7498 K</td>
+<td>the same network, extended with 1661 dwarfs within 1 kpc</td>
+<td>PARSEC M_Ks</td>
+<td>IRFM</td>
+<td>2%</td>
+</tr>
+<tr>
+<td>Hot dwarfs (A, B)</td>
+<td>7000--30000 K</td>
+<td>CK04 and TLUSTY spectra through the XP forward model, with an empirical correction</td>
+<td>PARSEC radius x model surface flux</td>
+<td>spectroscopic or spectral type; IRFM at 7000--7500 K</td>
+<td>1.2%</td>
+</tr>
+<tr>
+<td>Red giants (<code>fit_giant_companion</code>)</td>
+<td>3600--6800 K</td>
+<td>empirical template of APOGEE giants</td>
+<td>free scale, or a PARSEC M_Ks prior</td>
+<td>APOGEE ASPCAP</td>
+<td>3--13% at 392 nm, 3--10% at 442 nm</td>
+</tr>
+<tr>
+<td>DA white dwarfs (<code>fit_whitedwarf_companion</code>)</td>
+<td>6--80 kK, log g 7--9.5</td>
+<td>Koester spectra calibrated to real single-DA spectral labels and Gaia absolute XP fluxes</td>
+<td>thick/thin-H C/O cooling tracks, or free WD radius</td>
+<td>294 calibration stars and 289 independent single DAs</td>
+<td>independent Teff bias +1.4%, scatter 3.5%; absolute-flux bias +1.9%, source scatter about 14%</td>
+</tr>
+<tr>
+<td>Hot subdwarfs (<code>fit_subdwarf_companion</code>)</td>
+<td>20--45 kK, log g 5--6.5</td>
+<td>TMAP NLTE spectra through the XP forward model, with an empirical correction</td>
+<td>free radius at the parallax</td>
+<td>Dawson et al. (2026) spectroscopy</td>
+<td>1.3% (0.5--1.4% at 0.45--0.9 um)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cool-and-warm-dwarfs-an-empirical-network">Cool and warm dwarfs: an empirical network<a class="headerlink" href="#cool-and-warm-dwarfs-an-empirical-network" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Network.</strong> The J-CAPS v2.1 network is a 16-by-16 GELU MLP whose stored
+  weights NumPy evaluates. From Teff, G-Ks and [M/H] it predicts the SED
+  shape relative to Ks on all 168 channels. M_Ks then sets the absolute
+  level: F = shape x F_Ks(0) x 10**(-0.4 M_Ks).</li>
+<li><strong>Cool stars.</strong> The training stars are Gaia DR3 dwarfs within 100 pc with
+  APOGEE labels, observed in XP, 2MASS, unWISE and SPHEREx. Teff follows
+  the infrared-flux method (Casagrande et al. 2021) at 4500 K and above and
+  ASPCAP below. Below 3400 K, a three-mode spectral calibration, switched
+  off smoothly between 2800 and 3400 K, corrects the coolest M dwarfs.</li>
+<li><strong>Warm stars.</strong> The network was retrained with 1661 LAMOST/APOGEE dwarfs
+  at 6250--7500 K within 1 kpc and Edenhofer et al. (2023) E &lt; 0.05, on the
+  IRFM Teff scale. These stars have no SPHEREx spectra, and 7250--7500 K
+  holds only 137 of them.</li>
+<li><strong>Model error.</strong> A fractional covariance (four eigen-columns plus a
+  diagonal) is built from training residuals: a cold term below 3800 K and
+  a warm term above 4200 K, blended in between. No synthetic spectra enter
+  this part, and the network does not extrapolate beyond its training
+  coverage: 2800--7498 K at G-Ks &gt;= 0.51, plus a sparse ultracool box at
+  2313--2929 K, M_Ks 8.86--10.58, that holds the lowest PARSEC masses
+  (0.1 solar masses at 5 Gyr is 2451 K) without validated accuracy.</li>
+</ul>
+<h3 id="hot-dwarfs-calibrated-synthetic-spectra">Hot dwarfs: calibrated synthetic spectra<a class="headerlink" href="#hot-dwarfs-calibrated-synthetic-spectra" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Synthetic spectra.</strong> CK04 (Castelli &amp; Kurucz 2003) spectra cover Teff
+  below 15 kK and TLUSTY BSTAR2006 (Lanz &amp; Hubeny 2007) spectra 15--30 kK,
+  both at solar abundance. The two grids differ by about 7 per cent at
+  15 kK, so over 11--15 kK CK04 is moved onto TLUSTY by their 15 kK ratio
+  and the table is continuous.</li>
+<li><strong>Table.</strong> A forward model of the Gaia XP external calibration passes
+  each spectrum onto the XP channels, and J/H/Ks are sampled directly. The
+  result is tabulated on Teff 7000--30000 K (250 K steps) by log g 3--4.75
+  (0.05 dex) for R = 1 Rsun at 10 pc.</li>
+<li><strong>Empirical correction.</strong> Each channel is multiplied by exp(a + W b + s c):</li>
+<li>a is a per-channel offset of the XP operator;</li>
+<li>b scales with the Balmer line index W of the synthetic spectrum;</li>
+<li>c is a cool-edge term that fades out between 7000 and 9000 K.</li>
+</ul>
+<p>The 192 coefficients are fitted to 186 hot anchors and 348 IRFM dwarfs at
+  7000--7500 K. The anchors are radial-velocity-constant stars and SB1s,
+  without giants, Be or peculiar stars. On 46 held-out anchors and 86 held-out
+  dwarfs, the correction lowers the XP shape rms from 4.6--5.1 to
+  0.9--1.3 per cent; on 10 independent CALSPEC stars, from 4.7 to 1.8 per
+  cent.
+- <strong>Absolute flux.</strong> PARSEC gives Teff, log g and radius, and the flux is
+  the table times R**2. Over 7000--7498 K the network and the table are
+  blended smoothly, with their error terms, so the Teff scale is continuous
+  across the handover.
+- <strong>Coverage.</strong> The hot route predicts no W1/W2 or SPHEREx and is
+  calibrated for |[M/H]| &lt;= 0.3.</p>
+<h3 id="stellar-evolution-parsec">Stellar evolution: PARSEC<a class="headerlink" href="#stellar-evolution-parsec" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Isochrones.</strong> PARSEC v1.2S isochrones cover [M/H] -1.0 to +0.5 in
+  0.1 dex and log age 6.6--10.0 in 0.05 dex. They hold the pre-main
+  sequence and main sequence, end before the contraction hook, and are
+  interpolated linearly in mass, log age and [M/H].</li>
+<li><strong>What they supply.</strong> For a mass, age and [M/H], PARSEC supplies the
+  network's Teff, M_Ks and G-Ks, and the hot table's Teff, log g and
+  radius.</li>
+<li><strong>Binaries.</strong> The two components of a binary share age and [M/H], and
+  their fluxes are added.</li>
+<li><strong>Distance.</strong> The observed model is flux_10pc x (parallax / 100 mas)**2,
+  with no free normalisation.</li>
+</ul>
+<h3 id="red-giants-an-empirical-template">Red giants: an empirical template<a class="headerlink" href="#red-giants-an-empirical-template" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Template.</strong> <code>fit_giant_companion</code> does not emulate PARSEC giants. Its
+  <code>GiantTemplate</code> is built from 76210 APOGEE DR17 giants with Gaia XP, 2MASS
+  and AllWISE, each dereddened by 0.86 SFD E(B-V). A kernel-weighted
+  local-linear regression gives the template and its residual covariance on
+  a 100 K x 0.2 dex x 0.2 dex grid in Teff, log g and [M/H].</li>
+<li><strong>Luminosity.</strong> The giant's luminosity is a free scale, or, with
+  <code>luminosity="parsec"</code>, it is tied to the fitted parallax by the M_Ks
+  density of PARSEC giants near its labels and the PARSEC masses at its
+  Teff and M_Ks. <code>coeval=True</code> then places the companion at the giant's age.</li>
+<li><strong>Companion.</strong> The companion is the hot-dwarf model above.</li>
+</ul>
+<p>See <a href="../model/">model and limitations</a> for the full description and
+<a href="../data/">data and provenance</a> for the build scripts of each asset.</p>
+<h2 id="capabilities-and-scope">Capabilities and scope<a class="headerlink" href="#capabilities-and-scope" title="Permanent link">&para;</a></h2>
+<h3 id="data">Data<a class="headerlink" href="#data" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Gaia DR3 XP spectra on 61 channels at 392--992 nm, calibrated with
+  GaiaXPy from the public continuous spectra.</li>
+<li>2MASS J/H/Ks and AllWISE W1/W2 from Gaia's best-neighbour tables. A band
+  enters the fit only for a unique point-source match with A-quality
+  photometry and clean contamination flags (2MASS <code>cc_flg</code> and <code>gal_contam</code>
+  from the IRSA point source catalogue). W1/W2 are held out of <code>fit</code> by default.</li>
+<li>Optional SPHEREx QR2 spectra (<a href="../spherex/">SPHEREx downloads</a>).</li>
+<li>Gaia G/BP/RP are kept as metadata, not fit channels. Outside the
+  subdwarf route no ultraviolet data and no XP below 392 nm enter a fit, so
+  the Balmer jump is not used; the subdwarf route takes optional XP at
+  332--382 nm and GALEX FUV/NUV (<a href="../validation-subdwarf/">subdwarf validation</a>).</li>
+<li>Models predict absolute fluxes at the parallax, with no free
+  normalisation. The parallax is fixed at the catalogue value or fitted
+  within three catalogue standard deviations under its Gaussian constraint
+  (<code>fit_parallax=True</code> in <code>fit</code>, <code>luminosity=</code> in <code>fit_giant_companion</code>).</li>
+</ul>
+<h3 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Entry point</th>
+<th>Stars</th>
+<th>Support</th>
+<th>Hypotheses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>locate</code>, <code>fit_star</code></td>
+<td>any star with Gaia G, BP-RP, Ks and a parallax: placed on the HR diagram, then fitted with its region's route</td>
+<td>the routes below; subgiants, late M dwarfs, cool and hot evolved stars and stars below the supported main sequence return no fit</td>
+<td>per region: main sequence dwarf, MS+MS, DA+MS; A/B single, binary; giant alone, giant+companion; subdwarf hypotheses; WD hypotheses</td>
+</tr>
+<tr>
+<td><code>fit</code> with <code>StellarModel()</code></td>
+<td>FGKM dwarfs: empirical J-CAPS network on PARSEC tracks</td>
+<td>Teff 2800--7498 K (sparse ultracool support to 2313 K), age 0.5--10 Gyr, [M/H] -1.0 to +0.5; primary mass to 1.5--1.8 solar masses at 0.5--2 Gyr and 1.38 at 3 Gyr (solar [M/H])</td>
+<td>single star, coeval binary</td>
+</tr>
+<tr>
+<td><code>fit</code> with <code>StellarModel(hot=True)</code></td>
+<td>adds A and B dwarfs: CK04/TLUSTY table with an empirical XP correction</td>
+<td>7000--30000 K, log g 3--4.75, [M/H] -0.3 to +0.3, age from 4 Myr, mass to 20 solar masses; XP and J/H/Ks only</td>
+<td>single star, coeval binary</td>
+</tr>
+<tr>
+<td><code>fit_giant_companion</code></td>
+<td>red giant (empirical APOGEE template) plus a hot main-sequence companion</td>
+<td>giant Teff 3600--6800 K, log g 0--3.8, [M/H] -2.6 to +0.6; companion 1.5--15 solar masses at 10 Myr and solar [M/H]</td>
+<td>giant alone, giant plus companion profiled in mass</td>
+</tr>
+<tr>
+<td><code>fit_subdwarf_companion</code></td>
+<td>hot subdwarf (TMAP NLTE table with an XP correction) plus a cool dwarf, subgiant or red giant of another age</td>
+<td>subdwarf 20--45 kK, log g 5--6.5, three helium tiers (He-rich from 32 kK); companion as <code>StellarModel()</code>, the giant template at log g 3.2--3.8, or the blue-extended giant template at log g 0--3.8</td>
+<td>single FGK star or single giant, single subdwarf, subdwarf plus companion</td>
+</tr>
+<tr>
+<td><code>fit_whitedwarf_companion</code>, <code>whitedwarf_light_limit</code></td>
+<td>DA white dwarf plus a dwarf; conditional WD light envelope for a luminous primary</td>
+<td>DA table 6--80 kK, log g 7--9.5; C/O cooling tracks with thick or thin H; strongest label validation below 40 kK</td>
+<td>single dwarf, single DA, DA plus dwarf</td>
+</tr>
+<tr>
+<td><code>orbit.solve_orbit</code>, <code>rank_roots</code></td>
+<td>Gaia photocentre orbits</td>
+<td>as <code>StellarModel()</code></td>
+<td>faint companion, luminous twin</td>
+</tr>
+<tr>
+<td><code>orbit.solve_luminous_pair</code>, <code>branch_from_rv</code>, <code>solve_dark_companion</code></td>
+<td>photocentre orbits of two luminous stars of different kinds, e.g. sdB + FGK</td>
+<td>any masses</td>
+<td>both branches of a0 = a |B - beta_G|</td>
+</tr>
+</tbody>
+</table>
+<p>Fits stay inside these ranges; the models do not extrapolate.
+See <a href="../model/">model and limitations</a>.</p>
+<h3 id="what-the-fits-measure">What the fits measure<a class="headerlink" href="#what-the-fits-measure" title="Permanent link">&para;</a></h3>
+<p>White dwarfs: the default emulator is anchored to spectroscopic Teff/log g
+and absolute Gaia fluxes of 294 single DAs. On 289 independent stars,
+with extinction and parallax constraints, the cooling-relation fit gives
+1.4% temperature bias and 3.5% robust scatter. Its absolute-flux bias is
+1.9%, with about 14% source scatter. Masses remain conditional on the
+C/O cooling relation and reference gravity scale. For 126 SDSS DA+M
+systems the WD temperature scatter is 13.9%, and the composite statistic
+exceeds its threshold of 11 for 99 of them. For 29 Gaia/RV WD+MS orbits,
+the allowed WD light moves the orbit's WD mass by a median 0.037 solar
+masses (0.025 with GALEX caps). See the
+<a href="../validation-whitedwarf/">composite/orbit benchmarks</a>.</p>
+<p>Single stars:</p>
+<ul>
+<li><strong>FGK dwarfs.</strong> Hyades, Praesepe and Coma Ber members at 6000--7500 K
+  fit with chi2/N of 0.7--0.9 at free age, with masses 0.02--0.05 solar
+  masses below the isochrone mass. Free ages come out older than the
+  literature cluster ages (1.0--2.1 against 0.6--0.7 Gyr)
+  (<a href="../validation-warm/">warm-star validation</a>).</li>
+<li><strong>A and B dwarfs.</strong> 44 holdout anchors at 7.5--30 kK fit to 1.2--1.4 per
+  cent in XP shape, with Teff 0.2 kK below to 0.05 kK above the
+  spectroscopic values. XP and J/H/Ks do not constrain extinction for hot
+  stars, so E must be fixed or given a dust prior. The 1-sigma Teff width
+  is then 0.6--1.0 kK at 15 kK and 1.6--2.8 kK at 25 kK
+  (<a href="../validation-hot/">hot-star validation</a>).</li>
+</ul>
+<p>Unresolved coeval binaries. <code>result["delta"]</code> is the single-star minus
+binary objective, a model-preference diagnostic rather than a probability:</p>
+<ul>
+<li><strong>Known age.</strong> In mocks of 1.2--1.55 solar-mass primaries with age and
+  [M/H] fixed at the truth, q &gt;= 0.5 companions give Delta 25--400 and q
+  within 0.03. A Gaia DR3 SB2 gives q = 0.840 against the RV ratio 0.868.
+  For 20 warm SB2s, fits at the RV mass ratio lie within 4 of the best
+  objective.</li>
+<li><strong>Free age, warm primaries (1.2--1.6 solar masses).</strong> An older single
+  star reproduces the companion's light: Delta stays below about 15 and q
+  is unconstrained. Detection needs an independent age checked against the
+  same cluster's main sequence, or an asteroseismic log g (0.02 dex
+  detects q &gt;= 0.7). For a 0.8 solar-mass primary with a q = 0.7
+  companion, no single age comes within 449 of the binary objective.</li>
+<li><strong>F-type cluster members at the cluster age.</strong> With the parallax moved to
+  the cluster's RV-single sequence, Delta &gt; 25 is 2.7 times more likely for
+  a star with a luminous companion than for an RV-single star. It
+  separates the two classes no better than the height above the cluster
+  sequence.</li>
+<li><strong>Hot primaries.</strong> Delta does not identify an individual hot binary. For
+  near-ZAMS B and A cluster members (7--13 kK) fitted the same way, with a
+  20--30 per cent prior binary fraction, Delta &lt;= 25 makes a q &gt;~ 0.65
+  companion unlikely (7--11 per cent). Delta &gt; 25 marks a candidate
+  (50--65 per cent) for RV or imaging follow-up.</li>
+</ul>
+<p>Giants with a hot companion:</p>
+<ul>
+<li><strong>Detection threshold.</strong> <code>fit_giant_companion</code> detects a companion that
+  supplies more than about 20 per cent of the 0.40--0.45 micron light: 87
+  per cent of injections at 20--30 per cent, all above 30 per cent, none
+  below 10 per cent. The threshold of 10 lies above every one of 238
+  reddened control giants (maximum 8.8), the sample that also set
+  <code>tilt_sigma</code>; its false-positive rate on other giants awaits an
+  independent control set.</li>
+<li><strong>Recovery by mass.</strong> Injected 2 and 3 solar-mass companions are
+  detected in 92.9 and 99.2 per cent of cases. On the controls, the fit
+  excludes companions from 2 solar masses upward (median).</li>
+<li><strong>Luminosity and dust.</strong> By default the giant's luminosity is a free
+  scale at the catalogue parallax. <code>luminosity="parsec"</code> fits the parallax
+  and ties the luminosity to it through PARSEC priors on M_Ks and on the
+  implied mass; <code>dust_prior=</code> adds the Edenhofer map E, and <code>coeval=True</code>
+  holds the companion to the giant's age and below its mass. With these and
+  zero-point-corrected parallaxes passed through <code>parallax=</code>, the threshold
+  is 11 and injected 2 solar-mass companions are detected in 97.1 per cent
+  of cases.</li>
+<li><strong>Assumptions.</strong> The fit needs Teff, log g and [M/H] priors on the
+  APOGEE scale. Giant and companion share only extinction and, with
+  <code>luminosity=</code>, the parallax, and with <code>coeval=True</code> the age (<a href="../validation-giant/">giant validation</a>).</li>
+</ul>
+<p>Hot subdwarfs and their companions:</p>
+<ul>
+<li><strong>Single subdwarfs.</strong> For 157 Dawson et al. (2026) subdwarfs fitted out of
+  fold with their spectroscopic log g, Teff lies 0.4 kK above the
+  spectroscopic value (scatter 1.7 kK with XP at 332--382 nm, 2.6 kK
+  without) and the radius 1.3 per cent above their SED radii (scatter
+  4 per cent). Teff is compressed towards 30 kK (+1.1 kK below 28 kK,
+  -1.0 kK above 36 kK) and follows Dawson's scale, 1.05 kK below Luo et
+  al. (2021). The XP channels at 332--382 nm are validated for single
+  subdwarfs, not for composites; GALEX pulls Teff 5 kK low and is not used
+  by default.</li>
+<li><strong>Compact companions.</strong> For 5 subdwarfs with a compact-companion orbit
+  and 16 sdB+WD systems the composite is never preferred (Delta &lt;= 2.8);
+  dwarf companions above 0.12--0.45 solar masses are excluded.</li>
+<li><strong>Light fraction.</strong> In injections with real noise and model mismatch,
+  beta_G has a scatter of 0.005 for K/M companions, 0.025--0.031 for G and
+  0.04 for F, and an E prior 0.03 too high biases it by +0.02. Through a
+  photocentre orbit this gives M_sdB to 0.09--0.10 solar masses for G and
+  F companions; for K/M companions, with M_sdB = 0.47 +- 0.05, the orbit
+  gives the companion's dynamical mass to 0.04. A companion 0.1 solar
+  masses below its isochrone mass biases M_sdB by +0.07 (G) to +0.18 (K/M).</li>
+<li><strong>Detection.</strong> Requiring Delta &gt; 25 and beta_G &gt; 0.2 flags none of 230
+  RV-constant FGK dwarfs and recovers composites in which the subdwarf
+  gives more than half of the 400--450 nm light
+  (<a href="../validation-subdwarf/">subdwarf validation</a>).</li>
+</ul>
+<p>Other measurements:</p>
+<ul>
+<li><strong>Photocentre orbits.</strong> <code>solve_orbit</code> returns the faint-companion and
+  luminous-twin solutions of a Gaia astrometric orbit, and <code>rank_roots</code>
+  compares their SEDs (<a href="../orbit/">photocentre orbits</a>).</li>
+<li><strong>Extinction.</strong> E defaults to zero. <code>extinction=None</code> fits nonnegative
+  ZGR23 E with an <a href="../extinction/">Edenhofer 3D dust prior</a> that follows
+  the trial parallax. Distances outside the map have no prior support.
+  A numeric <code>extinction=</code> fixes E.</li>
+</ul>
+<h3 id="not-covered">Not covered<a class="headerlink" href="#not-covered" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Giants and subgiants in <code>fit</code>: the network is trained on dwarfs, the hot
+  table stops at log g 3, and stars near the turn-off are outside the
+  tables. The giant route models only a hot main-sequence companion.</li>
+<li>Brown dwarfs and dedicated ultracool atmospheres, triples, blends and
+  variable stars.</li>
+<li>Stars above 30 kK (O stars are untested), hot stars with |[M/H]| &gt; 0.3,
+  supergiants, Be and emission-line stars, chemically peculiar stars and
+  fast rotators.</li>
+<li>Binaries of different ages, except the giant, subdwarf and DA routes.</li>
+<li>Hot subdwarfs outside 20--45 kK and log g 5--6.5, He-rich subdwarfs below
+  32 kK, HW Vir-type close binaries with a reflection effect, pulsating
+  subdwarfs' light variations, non-DA/magnetic white dwarfs, ELM WDs,
+  and double-degenerate systems.</li>
+<li>Posterior uncertainties, calibrated binary probabilities and population
+  inference: fits return constrained best fits and objective differences.</li>
+<li>Correlations between XP channels: GaiaXPy inter-channel covariance is
+  omitted.</li>
+<li>SPHEREx above about 6400 K: these predictions are extrapolated.</li>
+</ul>
+<h2 id="one-star-located-first">One star, located first<a class="headerlink" href="#one-star-located-first" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">spbin</span><span class="w"> </span><span class="kn">import</span> <span class="n">download</span><span class="p">,</span> <span class="n">fit_star</span>
+
+<span class="n">sed</span> <span class="o">=</span> <span class="n">download</span><span class="p">(</span><span class="s2">"1521154374020165376"</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">"data"</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">fit_star</span><span class="p">(</span><span class="n">sed</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"region"</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="s2">"preferred"</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="s2">"delta"</span><span class="p">])</span>
+</code></pre></div>
+<p><code>locate</code> places the star by its parallax M_G, BP-RP and G-Ks, dereddened by
+<code>extinction=</code> or the <code>dust_prior</code> map mean, against the main sequence that
+the PARSEC tables populate inside the model's support, widened by 0.75 mag
+for unresolved binaries. <code>fit_star</code> then runs only that region's hypotheses:</p>
+<table>
+<thead>
+<tr>
+<th>Region</th>
+<th>Route</th>
+<th>Hypotheses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ms</code></td>
+<td><code>fit_whitedwarf_companion</code></td>
+<td>dwarf, coeval MS+MS with free q, DA+dwarf</td>
+</tr>
+<tr>
+<td><code>hot_ms</code></td>
+<td><code>fit</code> with <code>StellarModel(hot=True)</code></td>
+<td>single, coeval binary</td>
+</tr>
+<tr>
+<td><code>giant</code></td>
+<td><code>fit_giant_companion</code>, with <code>labels=dict(teff=, logg=, feh=)</code></td>
+<td>giant alone, giant+companion</td>
+</tr>
+<tr>
+<td><code>sdb</code></td>
+<td><code>fit_subdwarf_companion</code></td>
+<td>FGK, subdwarf, subdwarf+dwarf, subdwarf+subgiant</td>
+</tr>
+<tr>
+<td><code>wd</code></td>
+<td><code>fit_whitedwarf_companion</code></td>
+<td>dwarf, DA, DA+dwarf</td>
+</tr>
+</tbody>
+</table>
+<p>Hypotheses of one region share one data vector and likelihood, so their
+objectives compare directly; objectives of different regions do not. In the
+<code>ms</code> region MS+MS is one component with fully correlated model errors, as in
+<code>fit</code>. <code>preferred</code> is the simplest hypothesis within <code>tie=1</code> of the lowest
+objective. In the <code>ms</code> region <code>detection_statistic</code> gives
+objective(dwarf) − objective(composite) for MS+MS and DA+dwarf. Fitted with
+<code>feh=None, fit_parallax=True</code> and the extinction fitted under an
+<code>extinction_prior</code> 0.01--0.03 E wide, an MS+MS statistic
+above the returned <code>threshold</code> of 59 occurs for 0 of 197 independent
+RV-constant dwarfs and 22 per cent of 755 Gaia DR3 SB2s; near-twin pairs
+mostly stay below it. With the extinction under <code>EdenhoferPrior</code> at the
+map's own width, the returned threshold is 102, which 2 of the 197 exceed.
+Other priors return no threshold. DA+dwarf has no calibrated threshold in this
+region: a WD giving about 1 per cent of the G light is not detected, and
+WD-dominated pairs belong to the <code>wd</code> region
+(<a href="../validation-whitedwarf/#main-sequence-region-of-fit_star">validation</a>). <code>region=</code> overrides the location and <code>options=</code> passes arguments to
+the route. Age is free by default (<code>age_gyr=None</code>); location is sensitive to
+extinction beyond about 200 pc.</p>
+<h2 id="fit-extinction-and-parallax-together">Fit extinction and parallax together<a class="headerlink" href="#fit-extinction-and-parallax-together" title="Permanent link">&para;</a></h2>
+<p>Install <code>pip install -e ".[download,dust,notebook]"</code> for this tutorial.
+Prepare the Edenhofer posterior-sample map once on a server with enough
+memory; the full map is about 19 GB and is not downloaded by the fit.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">spbin</span><span class="w"> </span><span class="kn">import</span> <span class="n">EdenhoferPrior</span>
+
+<span class="n">prior</span> <span class="o">=</span> <span class="n">EdenhoferPrior</span><span class="p">()</span>  <span class="c1"># load the existing map once and reuse it</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">fit</span><span class="p">(</span><span class="n">sed</span><span class="p">,</span> <span class="n">extinction</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dust_prior</span><span class="o">=</span><span class="n">prior</span><span class="p">,</span> <span class="n">fit_parallax</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"binary"</span><span class="p">][</span><span class="s2">"extinction_e"</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="s2">"binary"</span><span class="p">][</span><span class="s2">"parallax_mas"</span><span class="p">])</span>
+</code></pre></div>
+<p><a href="https://github.com/jiadonglee/spbin/blob/main/examples/05_extinction_parallax.ipynb">Notebook 05</a> compares fixed E/parallax,
+fitted E at fixed parallax, and jointly fitted E/parallax on the same real
+SB2. It includes fitted parameters, absolute SEDs and input-prior plots.
+The results are constrained best fits, not posterior samples.</p>
+<p><img alt="Single and binary SED fits" src="../assets/sed-example.png" /></p>
+<p>Gaia DR3 SB2 <code>858860697467058688</code>: the single-star fit is orange and the
+coeval-binary fit blue, with extinction and parallax constraints.
+<a href="../assets/sed-example.pdf">Figure PDF</a> · <a href="https://github.com/jiadonglee/spbin/blob/main/scripts/plot_readme.py">Plotting script</a>.</p>
+<p><img alt="Extinction and parallax priors" src="../assets/extinction-parallax-priors.png" /></p>
+<p>Input priors and best-fit locations; these curves are not posteriors.
+<a href="../assets/extinction-parallax-priors.pdf">Figure PDF</a> · <a href="https://github.com/jiadonglee/spbin/blob/main/scripts/plot_readme.py">Plotting script</a>.</p>
+<h2 id="one-source">One source<a class="headerlink" href="#one-source" title="Permanent link">&para;</a></h2>
+<p>This example fixes age and metallicity. Use <code>age_gyr=None, feh=None</code> to fit
+them. Parallax is fixed by default; <code>fit_parallax=True</code> fits it with its
+catalogue Gaussian constraint. Use <code>kind="single"</code>, <code>kind="binary"</code>, or the default <code>kind="both"</code>;
+<code>q=0.7</code> fixes the binary mass ratio. <code>result["delta"]</code> is the single minus
+binary objective, including the parallax constraint when fitted. It is a model
+preference diagnostic, not a binary probability.</p>
+<p>Coordinates are also accepted: <code>download(ra=..., dec=...)</code>, in ICRS degrees
+at Gaia's reference epoch. Coordinate lookup requires exactly one Gaia
+match within 2 arcsec. Source IDs avoid coordinate-epoch ambiguity.</p>
+<p>Use <code>download(source_id, uv=True)</code> to also crossmatch GALEX, Swift/UVOT
+and XMM-OM. AB magnitudes, errors, quality flags and all matched observations
+are cached in <code>sed.metadata["uv"]</code> as diagnostics. UV photometry remains
+separate from the fitting channels; see the <a href="../api/#observations">UV API</a>.</p>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<p>Four executed notebooks, run from <code>examples/</code>:</p>
+<ul>
+<li><a href="https://github.com/jiadonglee/spbin/blob/main/examples/01_sed_fit.ipynb">01: fit an observed SED</a>: download a Gaia DR3 SB2,
+  compare single and coeval-binary fits, check q against the RV ratio, and scale up.</li>
+<li><a href="https://github.com/jiadonglee/spbin/blob/main/examples/02_gaia_orbit_twin.ipynb">02: Gaia orbit, hidden twin</a>: both solutions of
+  two astrometric substellar candidates and the one their SEDs prefer.</li>
+<li><a href="https://github.com/jiadonglee/spbin/blob/main/examples/03_warm_binaries.ipynb">03: warm primaries</a>: binary mocks with known
+  and free age, real SB2 checks, and the warm-star age/companion degeneracy.</li>
+<li><a href="https://github.com/jiadonglee/spbin/blob/main/examples/05_extinction_parallax.ipynb">05: extinction and parallax priors</a>:
+  fit E at fixed distance or jointly with catalogue-constrained parallax;
+  compare the SEDs, parameters and input priors on a real SB2.</li>
+</ul>
+<p><a href="https://github.com/jiadonglee/spbin/blob/main/examples/04_extinction_prior.py">04: extinction prior</a> is a runnable script
+comparing zero-extinction and Edenhofer-prior fits of a real SB2.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/" class="md-tabs__link">
+        <a href="../../overview/" class="md-tabs__link">
           
   
   
@@ -1329,6 +1329,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/" class="md-nav__link">
         
   
@@ -2069,7 +2097,7 @@
 <div class="highlight"><pre><span></span><code><span class="n">sed</span> <span class="o">=</span> <span class="n">download</span><span class="p">(</span><span class="s2">"858860697467058688"</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">"data"</span><span class="p">)</span>
 <span class="n">sed</span> <span class="o">=</span> <span class="n">download</span><span class="p">(</span><span class="n">ra</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">radius_arcsec</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">"data"</span><span class="p">)</span>
 </code></pre></div>
-<p>返回 <code>SED</code>。目录、原始 XP、校准后 XP 和 <code>sed.npz</code> 保存在单源目录中。已有缓存会复用；<code>refresh=True</code> 更新源数据。测光质量选择保留唯一点源匹配与 A 级测光，WISE 还要求污染标记为零。下载使用 Gaia DR3 原始视差。</p>
+<p>返回 <code>SED</code>。目录、原始 XP、校准后 XP 和 <code>sed.npz</code> 保存在单源目录中。已有缓存会复用；<code>refresh=True</code> 更新源数据。测光质量选择保留唯一点源匹配与 A 级测光，WISE 污染标记以及 2MASS 的 <code>cc_flg</code> 和 <code>gal_contam</code>（取自 IRSA 点源表）都须为零。下载使用 Gaia DR3 原始视差。</p>
 <h3 id="query_gaia-download_gaia"><code>query_gaia</code> 与 <code>download_gaia</code><a class="headerlink" href="#query_gaia-download_gaia" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">spbin</span><span class="w"> </span><span class="kn">import</span> <span class="n">query_gaia</span><span class="p">,</span> <span class="n">download_gaia</span>
 

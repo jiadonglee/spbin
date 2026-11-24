@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../overview/" class="md-tabs__link">
           
   
   
@@ -1232,6 +1232,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -1946,7 +1974,9 @@ including the 2MASS PSC/XSC join. Source IDs are retained as exact strings.
 Catalogue magnitudes, errors and quality/match flags are stored in metadata
 and the cached raw tables. A band enters the quality mask only for a
 unique, point-source match with A-quality photometry and valid errors.
-WISE contamination flags must be zero. Upper limits remain in the raw
+WISE contamination flags must be zero, as must the 2MASS <code>cc_flg</code> of the
+band and <code>gal_contam</code>; Gaia's 2MASS copy omits these two, so <code>download</code>
+reads them from the IRSA point source catalogue by designation. Upper limits remain in the raw
 tables and are excluded from the Gaussian flux fit.</p>
 <p>Vega magnitudes are converted to Jy, then to the model's catalogue-equivalent
 F_lambda convention at nominal wavelengths. Zero points are

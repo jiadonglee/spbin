@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/" class="md-tabs__link">
+        <a href="../../overview/" class="md-tabs__link">
           
   
   
@@ -1543,6 +1543,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/" class="md-nav__link">
         
   
@@ -2446,7 +2474,7 @@
 </code></pre></div>
 <p><a href="https://github.com/jiadonglee/spbin/blob/main/src/spbin/whitedwarf.py">Source / 源码</a></p>
 <h3 id="spbinfit_whitedwarf_companion"><code>spbin.fit_whitedwarf_companion</code><a class="headerlink" href="#spbinfit_whitedwarf_companion" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="n">fit_whitedwarf_companion</span><span class="p">(</span><span class="n">sed</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stellar</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">companions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">free_radius</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">companion_age_gyr</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">companion_feh</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">extinction</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">extinction_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dust_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parallax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fit_parallax</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">blue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">galex</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_spherex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">whitedwarf_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">companion_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hypotheses</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="n">fit_whitedwarf_companion</span><span class="p">(</span><span class="n">sed</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stellar</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">companions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">free_radius</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">companion_age_gyr</span><span class="o">=</span><span class="s1">'default'</span><span class="p">,</span> <span class="n">companion_feh</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">extinction</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">extinction_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dust_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parallax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fit_parallax</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">blue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">galex</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_spherex</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">whitedwarf_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">companion_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hypotheses</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 <p><a href="https://github.com/jiadonglee/spbin/blob/main/src/spbin/whitedwarf.py">Source / 源码</a></p>
 <h3 id="spbinwhitedwarf_light_limit"><code>spbin.whitedwarf_light_limit</code><a class="headerlink" href="#spbinwhitedwarf_light_limit" title="Permanent link">&para;</a></h3>
@@ -2488,7 +2516,7 @@
 </code></pre></div>
 <p><a href="https://github.com/jiadonglee/spbin/blob/main/src/spbin/gaia.py">Source / 源码</a></p>
 <h3 id="spbindownload_gaia"><code>spbin.download_gaia</code><a class="headerlink" href="#spbindownload_gaia" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="n">download_gaia</span><span class="p">(</span><span class="n">source_ids</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">products</span><span class="o">=</span><span class="p">(</span><span class="s1">'XP_CONTINUOUS'</span><span class="p">,),</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s1">'data/gaia-products'</span><span class="p">,</span> <span class="n">data_release</span><span class="o">=</span><span class="s1">'Gaia DR3'</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">data_structure</span><span class="o">=</span><span class="s1">'RAW'</span><span class="p">,</span> <span class="n">datalink_url</span><span class="o">=</span><span class="n">DATALINK</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">300</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><span class="n">download_gaia</span><span class="p">(</span><span class="n">source_ids</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">products</span><span class="o">=</span><span class="p">(</span><span class="s1">'XP_CONTINUOUS'</span><span class="p">,),</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s1">'data/gaia-products'</span><span class="p">,</span> <span class="n">data_release</span><span class="o">=</span><span class="s1">'Gaia DR3'</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">data_structure</span><span class="o">=</span><span class="s1">'DATAMODEL_GAIA'</span><span class="p">,</span> <span class="n">datalink_url</span><span class="o">=</span><span class="n">DATALINK</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">300</span><span class="p">))</span>
 </code></pre></div>
 <p><a href="https://github.com/jiadonglee/spbin/blob/main/src/spbin/gaia.py">Source / 源码</a></p>
 <h3 id="spbindownload_spherex"><code>spbin.download_spherex</code><a class="headerlink" href="#spbindownload_spherex" title="Permanent link">&para;</a></h3>

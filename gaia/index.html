@@ -281,7 +281,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../overview/" class="md-tabs__link">
           
   
   
@@ -1232,6 +1232,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models, results and scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/" class="md-nav__link">
         
   
@@ -1976,7 +2004,7 @@ catalogue. Public server jobs can expire before a delayed resume.</p>
 <h2 id="product-api">Product API<a class="headerlink" href="#product-api" title="Permanent link">&para;</a></h2>
 <p><code>download_gaia(source_ids, *, products=("XP_CONTINUOUS",),
 cache_dir="data/gaia-products", data_release="Gaia DR3", batch_size=100,
-workers=2, data_structure="RAW", datalink_url=..., timeout=(30, 300))</code>
+workers=2, data_structure="DATAMODEL_GAIA", datalink_url=..., timeout=(30, 300))</code>
 returns a list of dictionaries, one per batch and requested product:</p>
 <ul>
 <li><code>product</code>: requested DataLink product name.</li>
@@ -1993,8 +2021,8 @@ raises; a product advertised but missing from the downloaded FITS also raises.
 The downloader verifies source IDs before marking a batch complete. Product
 names must match the service exactly: an unadvertised name is reported as
 unavailable, so check names before interpreting an all-missing result.</p>
-<p><code>RAW</code> groups data in server-defined FITS tables; <code>INDIVIDUAL</code> requests
-individual-source files. Both are returned in ZIP archives. The raw bytes,
+<p><code>DATAMODEL_GAIA</code> returns the archive's Gaia data model and
+<code>DATAMODEL_STANDARD</code> its standardised one. Both are returned in ZIP archives. The raw bytes,
 FITS headers, array columns, units and covariance information are retained.
 No XP calibration or resampling is applied, and RVS spectra retain the archive's
 normalization. Read a member without extracting it:</p>
