@@ -88,6 +88,12 @@ ruff check .
 pytest -q
 ```
 
+## Citation
+
+If you use spbin in your research, please cite Li et al. (2026),
+[*Unresolved binaries from Gaia XP to SPHEREx*](https://www.alphaxiv.org/abs/2611.29702v1),
+arXiv:2611.29702.
+
 ## Credits
 
 The bundled stellar network and hot-star table are extracted from
