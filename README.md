@@ -94,6 +94,20 @@ If you use spbin in your research, please cite Li et al. (2026),
 [*Unresolved binaries from Gaia XP to SPHEREx*](https://www.alphaxiv.org/abs/2611.29702v1),
 arXiv:2611.29702.
 
+```bibtex
+@misc{Li2026spbin,
+  author        = {Li, Jiadong and Rix, Hans-Walter and M{\"u}ller-Horn, Johanna
+                   and El-Badry, Kareem and Pennell, Ben and Pang, Xiaoying and Liu, Chao},
+  title         = {Unresolved binaries from {Gaia XP} to {SPHEREx}},
+  year          = {2026},
+  eprint        = {2611.29702},
+  archivePrefix = {arXiv},
+  primaryClass  = {astro-ph.SR},
+  doi           = {10.48550/arXiv.2611.29702},
+  url           = {https://arxiv.org/abs/2611.29702}
+}
+```
+
 ## Credits
 
 The bundled stellar network and hot-star table are extracted from
